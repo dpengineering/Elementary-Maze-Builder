@@ -12,7 +12,7 @@ function createMaze() {
   }
 
   function handleInitialChange(index, value) {
-    initials[index] = value.toUpperCase().slice(0, 1); // Limit to one uppercase letter
+    initials[index] = value.toUpperCase().slice(0, 1);
     renderMaze();
   }
 
@@ -49,6 +49,78 @@ function createMaze() {
     }
   }
 
-  document.addEventListener('DOMContentLoaded', renderMaze);
+function exportToSVG() {
+  const cellSize = 30;
+  const svgWidth = size * cellSize;
+  const svgHeight = size * cellSize;
+  
+  let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">`;
+
+  // Draw border
+  svgContent += `<rect x="0" y="0" width="${svgWidth}" height="${svgHeight}" fill="none" stroke="black" stroke-width="4"/>`;
+
+  // Draw filled cells
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      if (grid[row][col] || row === 0 || row === size - 1 || col === 0 || col === size - 1) {
+        svgContent += `<rect x="${col * cellSize}" y="${row * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`;
+      }
+    }
+  }
+
+  svgContent += `</svg>`;
+
+  // Create and trigger the download
+  const blob = new Blob([svgContent], { type: "image/svg+xml" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "maze.svg";
+  link.click();
 }
+
+function exportToPNG() {
+  const cellSize = 30;
+  const canvasSize = size * cellSize;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvasSize;
+  canvas.height = canvasSize;
+  const ctx = canvas.getContext("2d");
+
+  // Fill background
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw filled cells (including border cells)
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      if (grid[row][col] || row === 0 || row === size - 1 || col === 0 || col === size - 1) {
+        ctx.fillStyle = "black";
+        ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+      }
+    }
+  }
+
+  // Draw border outline
+  ctx.strokeStyle = "black";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+  // Download the PNG
+  const link = document.createElement("a");
+  link.href = canvas.toDataURL("image/png");
+  link.download = "maze.png";
+  link.click();
+}
+
+
+  document.addEventListener('DOMContentLoaded', () => {
+    renderMaze();
+    document.getElementById('export-svg').addEventListener('click', exportToSVG);
+  });
+  
+  document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('export-png').addEventListener('click', exportToPNG);
+});
+}
+
 createMaze();
