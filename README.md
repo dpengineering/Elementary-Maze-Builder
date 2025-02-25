@@ -1,3 +1,16 @@
-# Elementary-Maze-Builder
 
-Used this site to aid development: https://jsfiddle.net/st59Lr0w/2/
+### Setup
+```
+npm install
+```
+### Testing
+npm run dev
+
+### Building
+npm run build
+npm run preview
+
+### References:
+https://vite.dev/guide/
+https://vite.dev/guide/static-deploy
+https://react.dev/learn
