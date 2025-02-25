@@ -1,4 +1,5 @@
 import { useState } from "react";
+// import './App.css'
 
 export default function App() {
     // Define the size of the grid (16x16) and the dimensions of each square
