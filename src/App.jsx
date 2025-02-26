@@ -37,16 +37,6 @@ export default function App() {
     setTopText(value.slice(0, 45)); // Limit input length to 45 characters to fit within the box without overflow
   };
 
-  // Function to toggle the color of a square when clicked (black/white), except for perimeter cells
-  const toggleCell = (row, col) => {
-    if (row === 0 || row === gridSize - 1 || col === 0 || col === gridSize - 1) return; // Ignore border clicks
-
-    // Create a new grid with the clicked cell toggled
-    const newGrid = grid.map((r, i) =>
-      r.map((c, j) => (i === row && j === col ? 1 - c : c))
-    );
-    setGrid(newGrid); // Update state with the modified grid
-  };
   return <div>
     <button onClick={() => downloadSVG(exportToSVG(grid, topText))}>Export</button>
     {/*for testing svg without downloading every time*/}
@@ -62,7 +52,7 @@ export default function App() {
   src={"data:image/svg+xml ;charset=utf-8," + encodeURIComponent(exportToSVG(grid, topText))} alt="SVG Preview" /> :
     <Grid
       grid={grid}
-      toggleCell={toggleCell}
+      setGrid={setGrid}
       topText={topText}
       handleTextChange={handleTextChange}
     />}
@@ -72,9 +62,53 @@ export default function App() {
 
   function Grid(props) {
     const gridSize = props.grid.length;
+    const grid = props.grid;
+    const setGrid = props.setGrid;
+
+     // Function to toggle the color of a square when clicked (black/white), except for perimeter cells
+  const toggleCell = (row, col) => {
+    if (row === 0 || row === gridSize - 1 || col === 0 || col === gridSize - 1) return; // Ignore border clicks
+
+    // Create a new grid with the clicked cell toggled
+    const newGrid = grid.map((r, i) =>
+      r.map((c, j) => (i === row && j === col ? 1 - c : c))
+    );
+    props.setGrid(newGrid); // Update state with the modified grid
+  };
+
+  const [draggingMode, setDraggingMode] = useState(null);
+  const onDown = (row, col) => {
+    if (row === 0 || row === gridSize - 1 || col === 0 || col === gridSize - 1) {
+      if (draggingMode == null) {
+        setDraggingMode(1);
+      }
+    }
+    toggleCell(row, col);
+    setDraggingMode(1 - grid[row][col]);
+  };
+
+  const onEnter = (row, col) => {
+    if (draggingMode === null) {
+      return;
+    }
+    if (row === 0 || row === gridSize - 1 || col === 0 || col === gridSize - 1) return; // Ignore border clicks
+
+    // Create a new grid with the clicked cell toggled
+    const newGrid = grid.map((r, i) =>
+      r.map((c, j) => (i === row && j === col ? draggingMode : c))
+    );
+    setGrid(newGrid); // Update state with the modified grid
+  };
+
+  const onUp = () => {
+    setDraggingMode(null);
+  };
+
   // Render the grid and UI elements
   return (
-      <div style={{
+      <div
+      onPointerUp={onUp}
+       style={{
         display: "grid",
         gridTemplateColumns: `repeat(${gridSize}, ${cellSize}px)`, // Set column widths
         width: `${gridSize * cellSize}px`, // Set total grid width
@@ -88,7 +122,9 @@ export default function App() {
               rowIndex={rowIndex}
               colIndex={colIndex}
               gridSize={gridSize}
-              toggleCell={props.toggleCell}
+              toggleCell={toggleCell}
+              onDown={onDown}
+              onEnter={onEnter}
             />;
           })
         )}
@@ -150,8 +186,10 @@ function Cell(props) {
 
   return (
     <div
-      className="cell"
-      onClick={() => props.toggleCell(rowIndex, colIndex)} // Handle square clicks
+      className="cell noselect"
+      // onClick={() => props.toggleCell(rowIndex, colIndex)} // Handle square clicks
+      onPointerDown={() => props.onDown(rowIndex, colIndex)}
+      onPointerEnter={() => props.onEnter(rowIndex, colIndex)}
       style={{
         width: cellSize,
         height: cellSize,
