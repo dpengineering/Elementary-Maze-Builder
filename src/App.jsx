@@ -2,11 +2,12 @@ import { useState } from "react";
 import './App.css';
 
 // Define offsets to ensure white circles are positioned correctly in the corners
+const C_OFF = 3;
 const CIRCLE_OFFSETS = {
-  topLeft: { x: 3, y: 3 },
-  topRight: { x: -3, y: 3 },
-  bottomLeft: { x: 3, y: -3 },
-  bottomRight: { x: -3, y: -3 }
+  topLeft: { x: C_OFF, y: C_OFF },
+  topRight: { x: -C_OFF, y: C_OFF },
+  bottomLeft: { x: C_OFF, y: -C_OFF },
+  bottomRight: { x: -C_OFF, y: -C_OFF }
 };
 
 // dimensions of each square
@@ -24,6 +25,8 @@ export default function App() {
       )
     )
   );
+
+  const [showSVG, setShowSVG] = useState(false);
 
   // Create a state to store text input for the top row
   const [topText, setTopText] = useState("");
@@ -44,18 +47,40 @@ export default function App() {
     );
     setGrid(newGrid); // Update state with the modified grid
   };
+  return <div>
+    <button onClick={() => downloadSVG(exportToSVG(grid))}>Export</button>
+    {/*for testing svg without downloading every time*/}
+    <button onClick={() => setShowSVG(!showSVG)}>{showSVG ? 'Show HTML' : 'Show SVG'}</button>
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      margin: `20px auto`
+    }}>
+    {showSVG ?
+    <img
+  src={"data:image/svg+xml ;charset=utf-8," + encodeURIComponent(exportToSVG(grid))} alt="SVG Preview" /> :
+    <Grid
+      grid={grid}
+      toggleCell={toggleCell}
+      topText={topText}
+      handleTextChange={handleTextChange}
+    />}
+    </div>
+  </div>
+}
 
+  function Grid(props) {
+    const gridSize = props.grid.length;
   // Render the grid and UI elements
   return (
-    <div style={{ textAlign: "center" }}>
       <div style={{
         display: "grid",
         gridTemplateColumns: `repeat(${gridSize}, ${cellSize}px)`, // Set column widths
-        margin: `${cellSize * 2}px auto`, // Center the grid vertically
         width: `${gridSize * cellSize}px`, // Set total grid width
         position: "relative" // Ensure elements align correctly
       }}>
-        {grid.map((row, rowIndex) =>
+        {props.grid.map((row, rowIndex) =>
           row.map((cell, colIndex) => {
             return <Cell
               key={`${rowIndex}-${colIndex}`}
@@ -63,7 +88,7 @@ export default function App() {
               rowIndex={rowIndex}
               colIndex={colIndex}
               gridSize={gridSize}
-              toggleCell={toggleCell}
+              toggleCell={props.toggleCell}
             />;
           })
         )}
@@ -77,16 +102,14 @@ export default function App() {
         >
           <input
             type="text"
-            value={topText}
-            onChange={handleTextChange}
+            value={props.topText}
+            onChange={props.handleTextChange}
             style={{
               fontSize: `${cellSize / 3}px`, // Set font size to be 1/3 of cell size
             }}
           />
         </div>
       </div>
-      <button onClick={() => exportToSVG(grid)}>Export</button>
-    </div>
   );
 }
 
@@ -183,8 +206,8 @@ function exportToSVG(grid) {
   }
 
   // Add white circles inside the four corner cells
-  const circleRadius = 7; // Adjust size if needed
-  const circleOffset = cellSize / 2;
+  const circleRadius = circleSize / 2;
+  const circleOffset = cellSize / 2 + 3;
   svgContent += `
     <circle cx="${circleOffset}" cy="${circleOffset}" r="${circleRadius}" fill="white"/> <!-- Top-left -->
     <circle cx="${svgWidth - circleOffset}" cy="${circleOffset}" r="${circleRadius}" fill="white"/> <!-- Top-right -->
@@ -194,6 +217,10 @@ function exportToSVG(grid) {
 
   svgContent += `</svg>`;
 
+  return svgContent
+}
+
+function downloadSVG(svgContent) {
   // Create and trigger the download
   const blob = new Blob([svgContent], { type: "image/svg+xml" });
   const link = document.createElement("a");
