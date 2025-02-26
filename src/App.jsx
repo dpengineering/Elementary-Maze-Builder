@@ -40,7 +40,7 @@ export default function App() {
   return <div>
     <button onClick={() => downloadSVG(exportToSVG(grid, topText))}>Export</button>
     {/*for testing svg without downloading every time*/}
-    <button onClick={() => setShowSVG(!showSVG)}>{showSVG ? 'Show HTML' : 'Show SVG'}</button>
+    <button onClick={() => setShowSVG(!showSVG)}>{showSVG ? 'Show Blocks' : 'Show Outline'}</button>
     <div style={{
       display: "flex",
       flexDirection: "column",
