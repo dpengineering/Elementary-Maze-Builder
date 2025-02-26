@@ -48,7 +48,7 @@ export default function App() {
     setGrid(newGrid); // Update state with the modified grid
   };
   return <div>
-    <button onClick={() => downloadSVG(exportToSVG(grid))}>Export</button>
+    <button onClick={() => downloadSVG(exportToSVG(grid, topText))}>Export</button>
     {/*for testing svg without downloading every time*/}
     <button onClick={() => setShowSVG(!showSVG)}>{showSVG ? 'Show HTML' : 'Show SVG'}</button>
     <div style={{
@@ -59,7 +59,7 @@ export default function App() {
     }}>
     {showSVG ?
     <img
-  src={"data:image/svg+xml ;charset=utf-8," + encodeURIComponent(exportToSVG(grid))} alt="SVG Preview" /> :
+  src={"data:image/svg+xml ;charset=utf-8," + encodeURIComponent(exportToSVG(grid, topText))} alt="SVG Preview" /> :
     <Grid
       grid={grid}
       toggleCell={toggleCell}
@@ -165,23 +165,36 @@ function Cell(props) {
   );
 }
 
-function exportToSVG(grid) {
+function exportToSVG(grid, text) {
   const svgWidth = grid.length * cellSize;
   const svgHeight = grid[0].length * cellSize;
   const borderRadius = cellSize / 2;
 
+  const strokeWidth = 2; // presumably the laser cutter doesn't care about this and it's just for display
+
+  const wallsVertical = Array(grid.length - 2).fill().map((_, rowIndex) =>
+    Array(grid[0].length - 1).fill().map((_, colIndex) => {
+      const row = rowIndex + 1; // skipping row 1 because it's the border
+      const column = colIndex;
+      const cell1 = grid[row][column];
+      const cell2 = grid[row][column + 1];
+      return cell1 !== cell2; // true if there's a vertical wall
+    })
+  );
+
+  const wallsHorizontal = Array(grid.length - 1).fill().map((_, rowIndex) =>
+    Array(grid[0].length - 2).fill().map((_, colIndex) => {
+      const row = rowIndex;
+      const column = colIndex + 1; // skipping column 1 because it's the border
+      const cell1 = grid[row][column];
+      const cell2 = grid[row + 1][column];
+      return cell1 !== cell2; // true if there's a horizontal wall
+    })
+  );
+  const style = `fill:none;stroke-width=${strokeWidth};stroke:black`;
   let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">`;
 
-  // Define a mask to "cut out" the inner open area of the maze
-  svgContent += `
-    <defs>
-      <mask id="mazeMask">
-        <rect width="${svgWidth}" height="${svgHeight}" fill="white"/> <!-- Full mask background -->
-        <rect x="${cellSize}" y="${cellSize}" width="${svgWidth - 2 * cellSize}" height="${svgHeight - 2 * cellSize}" fill="black"/> <!-- Cut out the inside -->
-      </mask>
-    </defs>`;
-
-  // Draw the outer border using the mask (so only the walls remain)
+  // outer walls  
   svgContent += `
     <path d="
       M ${borderRadius} 0 
@@ -194,13 +207,27 @@ function exportToSVG(grid) {
       V ${borderRadius} 
       A ${borderRadius} ${borderRadius} 0 0 1 ${borderRadius} 0 
       Z
-    " fill="black" mask="url(#mazeMask)"/>`;
+    " style="${style}"/>`;
 
   // Draw maze walls inside the grid
-  for (let row = 1; row < grid.length - 1; row++) {
-    for (let col = 1; col < grid[0].length - 1; col++) {
-      if (grid[row][col]) {
-        svgContent += `<rect x="${col * cellSize}" y="${row * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`;
+  for (let row = 0; row < wallsVertical.length; row++) {
+    for (let col = 0; col < wallsVertical[0].length; col++) {
+      if (wallsVertical[row][col]) {
+        const x = (col + 1) * cellSize;
+        const y1 = (row + 1) * cellSize;
+        const y2 = (row + 2) * cellSize;
+        svgContent += `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" style="${style}"/>`;
+      }
+    }
+  }
+
+  for (let row = 0; row < wallsHorizontal.length; row++) {
+    for (let col = 0; col < wallsHorizontal[0].length; col++) {
+      if (wallsHorizontal[row][col]) {
+        const x1 = (col + 1) * cellSize;
+        const x2 = (col + 2) * cellSize;
+        const y = (row + 1) * cellSize;
+        svgContent += `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" style="${style}"/>`;
       }
     }
   }
@@ -208,12 +235,15 @@ function exportToSVG(grid) {
   // Add white circles inside the four corner cells
   const circleRadius = circleSize / 2;
   const circleOffset = cellSize / 2 + 3;
+
   svgContent += `
-    <circle cx="${circleOffset}" cy="${circleOffset}" r="${circleRadius}" fill="white"/> <!-- Top-left -->
-    <circle cx="${svgWidth - circleOffset}" cy="${circleOffset}" r="${circleRadius}" fill="white"/> <!-- Top-right -->
-    <circle cx="${circleOffset}" cy="${svgHeight - circleOffset}" r="${circleRadius}" fill="white"/> <!-- Bottom-left -->
-    <circle cx="${svgWidth - circleOffset}" cy="${svgHeight - circleOffset}" r="${circleRadius}" fill="white"/> <!-- Bottom-right -->
+    <circle cx="${circleOffset}" cy="${circleOffset}" r="${circleRadius}" style="${style}"/> <!-- Top-left -->
+    <circle cx="${svgWidth - circleOffset}" cy="${circleOffset}" r="${circleRadius}" style="${style}"/> <!-- Top-right -->
+    <circle cx="${circleOffset}" cy="${svgHeight - circleOffset}" r="${circleRadius}" style="${style}"/> <!-- Bottom-left -->
+    <circle cx="${svgWidth - circleOffset}" cy="${svgHeight - circleOffset}" r="${circleRadius}" style="${style}"/> <!-- Bottom-right -->
   `;
+
+  svgContent += `<text x="50%" y="${cellSize / 2 + 2}" dominant-baseline="middle" text-anchor="middle" fill="none" stroke="red" font-size="25" font-family="Sans,Arial">${text}</text>`
 
   svgContent += `</svg>`;
 
