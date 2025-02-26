@@ -85,6 +85,7 @@ export default function App() {
           />
         </div>
       </div>
+      <button onClick={() => exportToSVG(grid)}>Export</button>
     </div>
   );
 }
@@ -139,4 +140,64 @@ function Cell(props) {
       {circleElement}
     </div>
   );
+}
+
+function exportToSVG(grid) {
+  const svgWidth = grid.length * cellSize;
+  const svgHeight = grid[0].length * cellSize;
+  const borderRadius = cellSize / 2;
+
+  let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">`;
+
+  // Define a mask to "cut out" the inner open area of the maze
+  svgContent += `
+    <defs>
+      <mask id="mazeMask">
+        <rect width="${svgWidth}" height="${svgHeight}" fill="white"/> <!-- Full mask background -->
+        <rect x="${cellSize}" y="${cellSize}" width="${svgWidth - 2 * cellSize}" height="${svgHeight - 2 * cellSize}" fill="black"/> <!-- Cut out the inside -->
+      </mask>
+    </defs>`;
+
+  // Draw the outer border using the mask (so only the walls remain)
+  svgContent += `
+    <path d="
+      M ${borderRadius} 0 
+      H ${svgWidth - borderRadius} 
+      A ${borderRadius} ${borderRadius} 0 0 1 ${svgWidth} ${borderRadius} 
+      V ${svgHeight - borderRadius} 
+      A ${borderRadius} ${borderRadius} 0 0 1 ${svgWidth - borderRadius} ${svgHeight} 
+      H ${borderRadius} 
+      A ${borderRadius} ${borderRadius} 0 0 1 0 ${svgHeight - borderRadius} 
+      V ${borderRadius} 
+      A ${borderRadius} ${borderRadius} 0 0 1 ${borderRadius} 0 
+      Z
+    " fill="black" mask="url(#mazeMask)"/>`;
+
+  // Draw maze walls inside the grid
+  for (let row = 1; row < grid.length - 1; row++) {
+    for (let col = 1; col < grid[0].length - 1; col++) {
+      if (grid[row][col]) {
+        svgContent += `<rect x="${col * cellSize}" y="${row * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`;
+      }
+    }
+  }
+
+  // Add white circles inside the four corner cells
+  const circleRadius = 7; // Adjust size if needed
+  const circleOffset = cellSize / 2;
+  svgContent += `
+    <circle cx="${circleOffset}" cy="${circleOffset}" r="${circleRadius}" fill="white"/> <!-- Top-left -->
+    <circle cx="${svgWidth - circleOffset}" cy="${circleOffset}" r="${circleRadius}" fill="white"/> <!-- Top-right -->
+    <circle cx="${circleOffset}" cy="${svgHeight - circleOffset}" r="${circleRadius}" fill="white"/> <!-- Bottom-left -->
+    <circle cx="${svgWidth - circleOffset}" cy="${svgHeight - circleOffset}" r="${circleRadius}" fill="white"/> <!-- Bottom-right -->
+  `;
+
+  svgContent += `</svg>`;
+
+  // Create and trigger the download
+  const blob = new Blob([svgContent], { type: "image/svg+xml" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "maze.svg";
+  link.click();
 }
