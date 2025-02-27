@@ -232,9 +232,111 @@ function exportToSVG(grid, text) {
       return cell1 !== cell2; // true if there's a horizontal wall
     })
   );
+
   const style = `fill:none;stroke-width=${strokeWidth};stroke:black`;
   let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">`;
   svgContent += `<g width="${svgWidth}mm" height="${svgHeight}mm">`;
+
+  const visited = Array(grid.length).fill().map((_, __) =>
+    Array(grid[0].length).fill(false)
+  );
+
+  const TOP = 0, RIGHT = 1, BOTTOM = 2, LEFT = 3;
+
+  const hasEdge = (row, col, edge) => {
+    switch ((edge + 4) % 4) {
+      case TOP:
+        return wallsHorizontal[row - 1][col - 1];
+      case RIGHT:
+        return wallsVertical[row - 1][col];
+      case BOTTOM:
+        return wallsHorizontal[row][col - 1];
+      case LEFT:
+        return wallsVertical[row - 1][col - 1];
+    }
+  }
+
+  const dRow = (dir) => {
+    switch (dir) {
+      case LEFT:
+        return 0;
+      case RIGHT:
+        return 0;
+      case TOP:
+        return -1;
+      case BOTTOM:
+        return 1;
+    }
+  }
+
+  const dCol = (dir) => {
+    switch (dir) {
+      case LEFT:
+        return -1;
+      case RIGHT:
+        return 1;
+      case TOP:
+        return 0;
+      case BOTTOM:
+        return 0;
+    }
+  }
+
+  const tracePath = (rowP, colP) => {
+    let row = rowP;
+    let col = colP;
+    let dir = RIGHT; // the direction we are trying to go next
+    while (true) {
+      if (dir === RIGHT) {
+        if (visited[row][col] === true) {
+          return;
+        }
+        visited[row][col] = true;
+      }
+
+      // coordinates for a line, which change depending which edge we're following
+      const x = ((dir === RIGHT || dir === BOTTOM) ? col + 1 : col) * cellSize;
+      const y = ((dir === BOTTOM || dir === LEFT) ? row + 1 : row) * cellSize;
+
+      // figure out if edge continues straight, or has an interior corner, or an exterior corner
+      if (hasEdge(row, col, dir)) {
+        // interior angle case
+        const r = INTERIOR_FILLET_RADIUS;
+        svgContent += `L ${x - dCol(dir) * r} ${y - dRow(dir) * r}`;
+        dir = (dir + 1) % 4;
+        svgContent += `A ${r} ${r} 0 0 1 ${x + dCol(dir) * r} ${y + dRow(dir) * r}`;
+      } else {
+        let nextRow = row + dRow(dir);
+        let nextCol = col + dCol(dir);
+        if (hasEdge(nextRow, nextCol, dir - 1)) {
+          // straight case
+          // do nothing and let the line continue
+        } else {
+          // exterior angle case
+          const r = EXTERIOR_FILLET_RADIUS;
+          svgContent += `L ${x - dCol(dir) * r} ${y - dRow(dir) * r}`;
+          dir = (dir + 4 - 1) % 4;
+          svgContent += `A ${r} ${r} 0 0 0 ${x + dCol(dir) * r} ${y + dRow(dir) * r}`;
+          nextRow += dRow(dir);
+          nextCol += dCol(dir);
+        }
+        row = nextRow;
+        col = nextCol;
+      }
+    }
+  }
+
+  // try to start following an edge at every place an edge might start
+  for (let row = 1; row < grid.length - 1; row++) {
+    for (let col = 1; col < grid[0].length - 1; col++) {
+      if (!visited[row][col] && !grid[row][col] && hasEdge(row, col, TOP)) {
+        svgContent += `
+          <path d="M ${col * cellSize + cellSize / 2} ${row * cellSize}`;
+        tracePath(row, col);
+        svgContent += `Z" style="${style}"/>`;
+      }
+    }
+  }
 
   // outer walls  
   svgContent += `
@@ -250,122 +352,6 @@ function exportToSVG(grid, text) {
       A ${borderRadius} ${borderRadius} 0 0 1 ${borderRadius} 0 
       Z
     " style="${style}"/>`;
-
-  // corners
-  let currentRow = [];
-  let lastRow = [];
-
-  for (let row = 0; row < grid.length - 1; row++) {
-    for (let col = 0; col < grid[0].length - 1; col++) {
-
-      let startX = null;
-      let endX = null;
-
-      let nextStartX = null;
-      let nextEndX = null;
-
-      let startY = null;
-      let endY = null;
-
-      let nextStartY = null;
-      let nextEndY = null;
-
-      if (row < grid.length - 2 && col < grid[0].length - 2) {
-      const isInteriorAngle = grid[row+1][col+1];
-      const radius = isInteriorAngle ?
-        INTERIOR_FILLET_RADIUS :
-        EXTERIOR_FILLET_RADIUS;
-
-      // top left
-      if (wallsHorizontal[row][col] && wallsVertical[row][col]) {
-        const x = (col + 1) * cellSize;
-        const y = (row + 1) * cellSize;
-        startX = radius;
-        startY = radius;
-        svgContent += `
-          <path d="
-            M ${x} ${y + radius} 
-            A ${radius} ${radius} 0 0 1 ${x + radius} ${y}
-          " style="${style}"/>`;
-      }
-      // bottom left
-      if (wallsHorizontal[row + 1][col] && wallsVertical[row][col]) {
-        const x = (col + 1) * cellSize;
-        const y = (row + 2) * cellSize;
-        nextStartX = radius;
-        endY = cellSize - radius;
-        svgContent += `
-          <path d="
-            M ${x} ${y - radius}
-            A ${radius} ${radius} 0 0 0 ${x + radius} ${y}
-          " style="${style}"/>`;
-      }
-      // top right
-      if (wallsHorizontal[row][col] && wallsVertical[row][col+1]) {
-        const x = (col + 2) * cellSize;
-        const y = (row + 1) * cellSize;
-        endX = cellSize - radius;
-        nextStartY = radius;
-        svgContent += `
-          <path d="
-            M ${x- radius} ${y} 
-            A ${radius} ${radius} 0 0 1 ${x} ${y + radius}
-          " style="${style}"/>`;
-      }
-      // bottom right
-      if (wallsHorizontal[row + 1][col] && wallsVertical[row][col+1]) {
-        const x = (col + 2) * cellSize;
-        const y = (row + 2) * cellSize;
-        nextEndX = cellSize - radius;
-        nextEndY = cellSize - radius;
-        svgContent += `
-          <path d="
-            M ${x- radius} ${y} 
-            A ${radius} ${radius} 0 0 0 ${x} ${y - radius}
-          " style="${style}"/>`;
-      }
-    }
-      function start(a,b) {
-        if (a == null && b == null) {
-          return 0;
-        }
-        if (a != null && b != null) {
-          return Math.min(a,b);
-        }
-        return a != null ? a : b;
-      }
-
-      function end(a,b) {
-        if (a == null && b == null) {
-          return cellSize;
-        }
-        if (a != null && b != null) {
-          return Math.max(a,b);
-        }
-        return a != null ? a : b;
-      }
-
-      if (row < grid.length - 2 && wallsVertical[row][col]) {
-        const x = (col + 1) * cellSize;
-        const y = (row + 1) * cellSize;
-        startY = start(startY, currentRow.length > 0 ? currentRow[col- 1].startY : null);
-        endY = end(endY, currentRow.length > 0 ? currentRow[col- 1].endY : null);
-        svgContent += `<line x1="${x}" y1="${y + startY}" x2="${x}" y2="${y + endY}" style="${style}"/>`;
-      }
-
-      if (col < grid[0].length - 2 && wallsHorizontal[row][col]) {
-        const x = (col + 1) * cellSize;
-        const y = (row + 1) * cellSize;
-        startX = start(startX, lastRow.length > 0 ? lastRow[col].startX : null);
-        endX = end(endX, lastRow.length > 0 ? lastRow[col].endX : null);
-        svgContent += `<line x1="${x + startX}" y1="${y}" x2="${x + endX}" y2="${y}" style="${style}"/>`;
-      }
-
-      currentRow.push({startX: nextStartX, endX: nextEndX, startY: nextStartY, endY: nextEndY});
-    }
-    lastRow = currentRow;
-    currentRow = [];
-  }
 
   // Add white circles inside the four corner cells
   const circleRadius = circleSize / 2;
