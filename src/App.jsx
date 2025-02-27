@@ -10,6 +10,9 @@ const CIRCLE_OFFSETS = {
   bottomRight: { x: -C_OFF, y: -C_OFF }
 };
 
+const INTERIOR_FILLET_RADIUS = 5;
+const EXTERIOR_FILLET_RADIUS = 10;
+
 // dimensions of each square
 const cellSize = 40; // Each square is 40x40 pixels
 const circleSize = cellSize / 2; // White circles are half the size of a cell
@@ -231,6 +234,7 @@ function exportToSVG(grid, text) {
   );
   const style = `fill:none;stroke-width=${strokeWidth};stroke:black`;
   let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">`;
+  svgContent += `<g width="${svgWidth}mm" height="${svgHeight}mm">`;
 
   // outer walls  
   svgContent += `
@@ -268,7 +272,9 @@ function exportToSVG(grid, text) {
 
       if (row < grid.length - 2 && col < grid[0].length - 2) {
       const isInteriorAngle = grid[row+1][col+1];
-      const radius = isInteriorAngle ? 7 : 15;
+      const radius = isInteriorAngle ?
+        INTERIOR_FILLET_RADIUS :
+        EXTERIOR_FILLET_RADIUS;
 
       // top left
       if (wallsHorizontal[row][col] && wallsVertical[row][col]) {
@@ -374,7 +380,7 @@ function exportToSVG(grid, text) {
 
   svgContent += `<text x="50%" y="${cellSize / 2 + 2}" dominant-baseline="middle" text-anchor="middle" fill="none" stroke="red" font-size="25" font-family="Sans,Arial">${text}</text>`
 
-  svgContent += `</svg>`;
+  svgContent += `</g></svg>`;
 
   return svgContent
 }
