@@ -1,21 +1,31 @@
 import { useState } from "react";
 import './App.css';
 
-// Define offsets to ensure white circles are positioned correctly in the corners
-const C_OFF = 3;
-const CIRCLE_OFFSETS = {
-  topLeft: { x: C_OFF, y: C_OFF },
-  topRight: { x: -C_OFF, y: C_OFF },
-  bottomLeft: { x: C_OFF, y: -C_OFF },
-  bottomRight: { x: -C_OFF, y: -C_OFF }
-};
+// Dimensions (in inches)
+const TOTAL_WIDTH = 3.95;
+const CELLS_PER_COL = 16;
+const CELL_SIZE = TOTAL_WIDTH / CELLS_PER_COL;
 
-const INTERIOR_FILLET_RADIUS = 5;
-const EXTERIOR_FILLET_RADIUS = 10;
+const BORDER_RADIUS = CELL_SIZE / 2;
+const SCREW_HOLE_RADIUS = CELL_SIZE / 4;
+// TODO Y'all can figure out what these values are exactly supposed to be
+const INTERIOR_FILLET_RADIUS = CELL_SIZE / 8; 
+const EXTERIOR_FILLET_RADIUS = CELL_SIZE / 4;
+const SCREW_HOLE_OFFSET = 0.01875; // how far to move the screw hole along both x and y axes towards the center
 
-// dimensions of each square
-const cellSize = 40; // Each square is 40x40 pixels
-const circleSize = cellSize / 2; // White circles are half the size of a cell
+// How wide we draw the cut lines.
+// Probably irrelevant to the laser cutter but might matter
+// if cutting mode set to fill
+const STROKE_WIDTH = 0.01;
+
+const DPI = 96;
+
+// const CIRCLE_OFFSETS = {
+//   topLeft: { x: C_OFF, y: C_OFF },
+//   topRight: { x: -C_OFF, y: C_OFF },
+//   bottomLeft: { x: C_OFF, y: -C_OFF },
+//   bottomRight: { x: -C_OFF, y: -C_OFF }
+// };
 
 export default function App() {
   const gridSize = 16; // Define the size of the grid (16x16)
@@ -32,7 +42,7 @@ export default function App() {
   const [showSVG, setShowSVG] = useState(false);
 
   // Create a state to store text input for the top row
-  const [topText, setTopText] = useState("");
+  const [topText, setTopText] = useState("Your Name Here");
 
   // Function to handle text input changes
   const handleTextChange = (event) => {
@@ -42,7 +52,6 @@ export default function App() {
 
   return <div>
     <button onClick={() => downloadSVG(exportToSVG(grid, topText))}>Export</button>
-    {/*for testing svg without downloading every time*/}
     <button onClick={() => setShowSVG(!showSVG)}>{showSVG ? 'Show Blocks' : 'Show Outline'}</button>
     <div style={{
       display: "flex",
@@ -52,7 +61,8 @@ export default function App() {
     }}>
     {showSVG ?
     <img
-  src={"data:image/svg+xml ;charset=utf-8," + encodeURIComponent(exportToSVG(grid, topText))} alt="SVG Preview" /> :
+      src={"data:image/svg+xml ;charset=utf-8," + encodeURIComponent(exportToSVG(grid, topText))} alt="SVG Preview"
+    /> :
     <Grid
       grid={grid}
       setGrid={setGrid}
@@ -90,9 +100,15 @@ export default function App() {
     setDraggingMode(1 - grid[row][col]);
   };
 
-  const onEnter = (row, col) => {
+  const onMove = (row, col) => {
     if (draggingMode === null) {
       return;
+    }
+    if (row < 0 || row >= gridSize || col < 0 || col >= gridSize) {
+      return; // Ignore out-of-bounds clicks
+    }
+    if (grid[row][col] === draggingMode) {
+      return; // Ignore if the cell is already in the desired state
     }
     if (row === 0 || row === gridSize - 1 || col === 0 || col === gridSize - 1) return; // Ignore border clicks
 
@@ -107,111 +123,29 @@ export default function App() {
     setDraggingMode(null);
   };
 
-  // Render the grid and UI elements
-  return (
-      <div
-      onPointerUp={onUp}
-       style={{
-        display: "grid",
-        gridTemplateColumns: `repeat(${gridSize}, ${cellSize}px)`, // Set column widths
-        width: `${gridSize * cellSize}px`, // Set total grid width
-        position: "relative" // Ensure elements align correctly
-      }}>
-        {props.grid.map((row, rowIndex) =>
-          row.map((cell, colIndex) => {
-            return <Cell
-              key={`${rowIndex}-${colIndex}`}
-              cell={cell}
-              rowIndex={rowIndex}
-              colIndex={colIndex}
-              gridSize={gridSize}
-              toggleCell={toggleCell}
-              onDown={onDown}
-              onEnter={onEnter}
-            />;
-          })
-        )}
-        {/* Single text input box replacing 14 individual squares */}
-        <div
-          id="textDiv"
-          style={{
-            width: `${cellSize * (gridSize - 2)}px`, // Set total width equivalent to 14 cells
-            height: `${cellSize}px`, // Keep the height of one cell
-          }}
-        >
-          <input
-            type="text"
-            value={props.topText}
-            onChange={props.handleTextChange}
-            style={{
-              fontSize: `${cellSize / 3}px`, // Set font size to be 1/3 of cell size
-            }}
-          />
-        </div>
-      </div>
-  );
-}
-
-function Cell(props) {
-  const rowIndex = props.rowIndex;
-  const colIndex = props.colIndex;
-  const isTopEdge = rowIndex === 0;
-  const isBottomEdge = rowIndex === props.gridSize - 1;
-  const isLeftEdge = colIndex === 0;
-  const isRightEdge = colIndex === props.gridSize - 1;
-
-  // Define rounded corners for the border
-  let borderRadius = "0";
-  if (isLeftEdge && isTopEdge) borderRadius = `50% 0 0 0`; // Top-left corner
-  if (isRightEdge && isTopEdge) borderRadius = `0 50% 0 0`; // Top-right corner
-  if (isLeftEdge && isBottomEdge) borderRadius = `0 0 0 50%`; // Bottom-left corner
-  if (isRightEdge && isBottomEdge) borderRadius = `0 0 50% 0`; // Bottom-right corner
-
-  // Skip rendering squares for the top row since it's now a single text box
-  if (isTopEdge && !isLeftEdge && !isRightEdge) return null;
-
-  // Render white circles in the four corners
-  let circleElement = null;
-  if ((isTopEdge && isLeftEdge) || (isTopEdge && isRightEdge) ||
-    (isBottomEdge && isLeftEdge) || (isBottomEdge && isRightEdge)) {
-    const circleOffset = CIRCLE_OFFSETS[isTopEdge ? (isLeftEdge ? "topLeft" : "topRight") : (isLeftEdge ? "bottomLeft" : "bottomRight")];
-    circleElement =
-      <div
-        className="circle"
-        style={{
-          width: circleSize,
-          height: circleSize,
-          left: `calc(50% + ${circleOffset.x}px)`,
-          top: `calc(50% + ${circleOffset.y}px)`,
-        }}
-      ></div>;
+  const getCoord = (e) => {
+    let rect = e.currentTarget.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
+    const cellSizePixels = CELL_SIZE * DPI;
+    let row = Math.floor(y / cellSizePixels);
+    let col = Math.floor(x / cellSizePixels);
+    return [row, col];
   }
 
-  return (
-    <div
-      className="cell noselect"
-      // onClick={() => props.toggleCell(rowIndex, colIndex)} // Handle square clicks
-      onPointerDown={() => props.onDown(rowIndex, colIndex)}
-      onPointerEnter={() => props.onEnter(rowIndex, colIndex)}
-      style={{
-        width: cellSize,
-        height: cellSize,
-        backgroundColor: props.cell ? "black" : "white", // Set square color
-        cursor: isTopEdge || isBottomEdge || isLeftEdge || isRightEdge ? "default" : "pointer", // Only allow clicking inside
-        borderRadius: borderRadius,
-      }}
-    >
-      {circleElement}
-    </div>
-  );
+  return <div
+  className="noselect">
+    <img
+    draggable="false"
+  src={"data:image/svg+xml ;charset=utf-8," + encodeURIComponent(exportToSVG(grid, props.topText))} alt="SVG Preview"
+  onPointerDown={(e) => onDown(...getCoord(e))}
+  onPointerMove={(e) => onMove(...getCoord(e))}
+  onPointerUp={onUp}
+/></div>;
+
 }
 
 function exportToSVG(grid, text) {
-  const svgWidth = grid.length * cellSize;
-  const svgHeight = grid[0].length * cellSize;
-  const borderRadius = cellSize / 2;
-
-  const strokeWidth = 2; // presumably the laser cutter doesn't care about this and it's just for display
 
   const wallsVertical = Array(grid.length - 2).fill().map((_, rowIndex) =>
     Array(grid[0].length - 1).fill().map((_, colIndex) => {
@@ -233,14 +167,35 @@ function exportToSVG(grid, text) {
     })
   );
 
-  const style = `fill:none;stroke-width=${strokeWidth};stroke:black`;
-  let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">`;
-  svgContent += `<g width="${svgWidth}mm" height="${svgHeight}mm">`;
+  const style = `fill:none;stroke:black`;
+  let svgContent = `<svg
+    xmlns="http://www.w3.org/2000/svg"
+      width="${TOTAL_WIDTH}in"
+      height="${TOTAL_WIDTH}in"
+      viewBox="0 0 ${TOTAL_WIDTH} ${TOTAL_WIDTH}"
+    ><g stroke-width="${STROKE_WIDTH}">`;
 
-  const visited = Array(grid.length).fill().map((_, __) =>
+    // outer walls  
+    svgContent += `
+    <path d="
+      M ${BORDER_RADIUS} 0 
+      H ${TOTAL_WIDTH - BORDER_RADIUS} 
+      A ${BORDER_RADIUS} ${BORDER_RADIUS} 0 0 1 ${TOTAL_WIDTH} ${BORDER_RADIUS} 
+      V ${TOTAL_WIDTH - BORDER_RADIUS} 
+      A ${BORDER_RADIUS} ${BORDER_RADIUS} 0 0 1 ${TOTAL_WIDTH - BORDER_RADIUS} ${TOTAL_WIDTH} 
+      H ${BORDER_RADIUS} 
+      A ${BORDER_RADIUS} ${BORDER_RADIUS} 0 0 1 0 ${TOTAL_WIDTH - BORDER_RADIUS} 
+      V ${BORDER_RADIUS} 
+      A ${BORDER_RADIUS} ${BORDER_RADIUS} 0 0 1 ${BORDER_RADIUS} 0 
+      Z
+    " style="fill:black;stroke:black"/>`;
+
+  const visitedRight = Array(grid.length).fill().map((_, __) =>
     Array(grid[0].length).fill(false)
   );
-
+  const visitedLeft = Array(grid.length).fill().map((_, __) =>
+    Array(grid[0].length).fill(false)
+  );
   const TOP = 0, RIGHT = 1, BOTTOM = 2, LEFT = 3;
 
   const hasEdge = (row, col, edge) => {
@@ -282,21 +237,41 @@ function exportToSVG(grid, text) {
     }
   }
 
-  const tracePath = (rowP, colP) => {
-    let row = rowP;
-    let col = colP;
-    let dir = RIGHT; // the direction we are trying to go next
+  const tracePath = (row, col, initialDir) => {
+    svgContent += `
+          <path d="M ${col * CELL_SIZE + CELL_SIZE / 2} ${(initialDir === RIGHT ? row : row + 1) * CELL_SIZE}`;
+    let dir = initialDir; // the direction we are trying to go next
+    let isIsland = true;
+    let totalRotation = 0;
     while (true) {
-      if (dir === RIGHT) {
-        if (visited[row][col] === true) {
+      if (dir === RIGHT || dir === LEFT) {
+        if (dir === RIGHT && visitedRight[row][col] || dir === LEFT && visitedLeft[row][col]) {
+          // we have already visited this cell, so we are done
+          let fill = totalRotation < 0 ? 'black': 'white';
+          if (totalRotation < 0 && isIsland) {
+            fill = 'blue';
+          }
+          svgContent += `Z" style="fill:${fill}; stroke:black"/>`; // close path
           return;
         }
-        visited[row][col] = true;
+        if (dir === RIGHT)
+          visitedRight[row][col] = true;
+        else
+          visitedLeft[row][col] = true;
       }
 
+      
+
       // coordinates for a line, which change depending which edge we're following
-      const x = ((dir === RIGHT || dir === BOTTOM) ? col + 1 : col) * cellSize;
-      const y = ((dir === BOTTOM || dir === LEFT) ? row + 1 : row) * cellSize;
+      const colPos = ((dir === RIGHT || dir === BOTTOM) ? col + 1 : col);
+      const rowPos = ((dir === BOTTOM || dir === LEFT) ? row + 1 : row);
+
+      if (colPos === 1 || colPos === grid[0].length - 1 || rowPos === 1 || rowPos === grid.length - 1) {
+        isIsland = false;
+      }
+
+      const x = colPos * CELL_SIZE;
+      const y = rowPos * CELL_SIZE;
 
       // figure out if edge continues straight, or has an interior corner, or an exterior corner
       if (hasEdge(row, col, dir)) {
@@ -304,6 +279,7 @@ function exportToSVG(grid, text) {
         const r = INTERIOR_FILLET_RADIUS;
         svgContent += `L ${x - dCol(dir) * r} ${y - dRow(dir) * r}`;
         dir = (dir + 1) % 4;
+        totalRotation++;
         svgContent += `A ${r} ${r} 0 0 1 ${x + dCol(dir) * r} ${y + dRow(dir) * r}`;
       } else {
         let nextRow = row + dRow(dir);
@@ -316,6 +292,7 @@ function exportToSVG(grid, text) {
           const r = EXTERIOR_FILLET_RADIUS;
           svgContent += `L ${x - dCol(dir) * r} ${y - dRow(dir) * r}`;
           dir = (dir + 4 - 1) % 4;
+          totalRotation--;
           svgContent += `A ${r} ${r} 0 0 0 ${x + dCol(dir) * r} ${y + dRow(dir) * r}`;
           nextRow += dRow(dir);
           nextCol += dCol(dir);
@@ -329,42 +306,30 @@ function exportToSVG(grid, text) {
   // try to start following an edge at every place an edge might start
   for (let row = 1; row < grid.length - 1; row++) {
     for (let col = 1; col < grid[0].length - 1; col++) {
-      if (!visited[row][col] && !grid[row][col] && hasEdge(row, col, TOP)) {
-        svgContent += `
-          <path d="M ${col * cellSize + cellSize / 2} ${row * cellSize}`;
-        tracePath(row, col);
-        svgContent += `Z" style="${style}"/>`;
+      if (!grid[row][col]) {
+        if (!visitedRight[row][col] && hasEdge(row, col, TOP)) {
+          tracePath(row, col, RIGHT);
+        }
+        if (!visitedLeft[row][col] && hasEdge(row, col, BOTTOM)) {
+          tracePath(row, col, LEFT);
+        }
       }
     }
   }
 
-  // outer walls  
-  svgContent += `
-    <path d="
-      M ${borderRadius} 0 
-      H ${svgWidth - borderRadius} 
-      A ${borderRadius} ${borderRadius} 0 0 1 ${svgWidth} ${borderRadius} 
-      V ${svgHeight - borderRadius} 
-      A ${borderRadius} ${borderRadius} 0 0 1 ${svgWidth - borderRadius} ${svgHeight} 
-      H ${borderRadius} 
-      A ${borderRadius} ${borderRadius} 0 0 1 0 ${svgHeight - borderRadius} 
-      V ${borderRadius} 
-      A ${borderRadius} ${borderRadius} 0 0 1 ${borderRadius} 0 
-      Z
-    " style="${style}"/>`;
-
   // Add white circles inside the four corner cells
-  const circleRadius = circleSize / 2;
-  const circleOffset = cellSize / 2 + 3;
+  const circleOffset = CELL_SIZE / 2 + SCREW_HOLE_OFFSET;
 
   svgContent += `
-    <circle cx="${circleOffset}" cy="${circleOffset}" r="${circleRadius}" style="${style}"/> <!-- Top-left -->
-    <circle cx="${svgWidth - circleOffset}" cy="${circleOffset}" r="${circleRadius}" style="${style}"/> <!-- Top-right -->
-    <circle cx="${circleOffset}" cy="${svgHeight - circleOffset}" r="${circleRadius}" style="${style}"/> <!-- Bottom-left -->
-    <circle cx="${svgWidth - circleOffset}" cy="${svgHeight - circleOffset}" r="${circleRadius}" style="${style}"/> <!-- Bottom-right -->
+    <g fill="white" stroke="black">
+      <circle cx="${circleOffset}" cy="${circleOffset}" r="${SCREW_HOLE_RADIUS}"/> <!-- Top-left -->
+      <circle cx="${TOTAL_WIDTH - circleOffset}" cy="${circleOffset}" r="${SCREW_HOLE_RADIUS}"/> <!-- Top-right -->
+      <circle cx="${circleOffset}" cy="${TOTAL_WIDTH - circleOffset}" r="${SCREW_HOLE_RADIUS}"/> <!-- Bottom-left -->
+      <circle cx="${TOTAL_WIDTH - circleOffset}" cy="${TOTAL_WIDTH - circleOffset}" r="${SCREW_HOLE_RADIUS}"/> <!-- Bottom-right -->
+    </g>
   `;
 
-  svgContent += `<text x="50%" y="${cellSize / 2 + 2}" dominant-baseline="middle" text-anchor="middle" fill="none" stroke="red" font-size="25" font-family="Sans,Arial">${text}</text>`
+  svgContent += `<text x="50%" y="${CELL_SIZE / 2}" dominant-baseline="middle" text-anchor="middle" fill="none" stroke="red" font-size="0.1" font-family="Sans,Arial">${text}</text>`
 
   svgContent += `</g></svg>`;
 
