@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState, useRef} from "react";
 import './App.css';
 
 // Dimensions (in inches)
@@ -9,8 +9,9 @@ const CELL_SIZE = TOTAL_WIDTH / CELLS_PER_COL;
 const BORDER_RADIUS = CELL_SIZE / 2;
 const SCREW_HOLE_RADIUS = CELL_SIZE / 4;
 // TODO Y'all can figure out what these values are exactly supposed to be
-const INTERIOR_FILLET_RADIUS = CELL_SIZE / 8;
-const EXTERIOR_FILLET_RADIUS = CELL_SIZE / 4;
+const BALL_HOLE_RADIUS = CELL_SIZE * 0.4;
+const INTERIOR_FILLET_RADIUS = CELL_SIZE / 6;
+const EXTERIOR_FILLET_RADIUS = CELL_SIZE / 10;
 const SCREW_HOLE_OFFSET = 0.01875; // how far to move the screw hole along both x and y axes towards the center
 
 const FONT_SIZE = 0.13; // for the engraving text
@@ -49,6 +50,21 @@ export default function App() {
   );
 
   const [mode, setMode] = useState(MODE_BLOCKS);
+  const [showIssues, setShowIssues] = useState(false);
+  const [zoomPercent, setZoomPercent] = useState(200);
+
+  const intervalRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    clearInterval(intervalRef.current);
+    setShowIssues(false);
+  }, [mode]);
 
   // Create a state to store text input for the top row
   const [topText, setTopText] = useState("<Your Name Here>");
@@ -60,12 +76,31 @@ export default function App() {
   };
 
   const renderProps = {
-    showIssues: false,
+    showIssues: showIssues,
     mode: mode,
+    zoom: zoomPercent / 100,
+  };
+
+  const onExport = () => {
+    const svg = exportToSVG(grid, topText, { mode: MODE_OUTLINE, validateDesign: true});
+    if (svg == null) {
+      setMode(MODE_BLOCKS);
+      setShowIssues(true);
+      clearInterval(intervalRef.current);
+      let counter = 0;
+      intervalRef.current = setInterval(() => {
+        setShowIssues(counter % 2);
+        counter++;
+        if (counter === 7)
+          clearInterval(intervalRef.current);
+      }, 250);
+    } else {
+      downloadSVG(svg, topText);
+    }
   };
 
   return <div>
-    <button onClick={() => downloadSVG(exportToSVG(grid, topText, { mode: MODE_OUTLINE }), topText)}>Export</button>
+    <button onClick={onExport}>Export</button>
     <button onClick={() => setMode(MODE_BLOCKS)}>Show Blocks</button>
     <button onClick={() => setMode(MODE_OUTLINE)}>Show Outline</button>
     <input
@@ -139,7 +174,7 @@ function Grid(props) {
     setDraggingMode(null);
   };
 
-  const cellSizePixels = CELL_SIZE * DPI;
+  const cellSizePixels = CELL_SIZE * DPI * props.renderProps.zoom;
 
   const getCoord = (e) => {
     let rect = e.currentTarget.getBoundingClientRect();
@@ -163,7 +198,7 @@ function Grid(props) {
 }
 
 function exportToSVG(grid, text, renderProps) {
-
+  let designHasErrors = false;
   const wallsVertical = Array(grid.length - 2).fill().map((_, rowIndex) =>
     Array(grid[0].length - 1).fill().map((_, colIndex) => {
       const row = rowIndex + 1; // skipping row 1 because it's the border
@@ -186,12 +221,14 @@ function exportToSVG(grid, text, renderProps) {
 
   const styleContent = renderProps.mode === MODE_OUTLINE ? `fill="none" stroke="black"` : `fill="black" stroke="none"`;
 
+  const zoomedWidth = TOTAL_WIDTH * renderProps.zoom;
+
   let svgContent = `<svg
     xmlns="http://www.w3.org/2000/svg"
-      width="${TOTAL_WIDTH}in"
-      height="${TOTAL_WIDTH}in"
-      viewBox="0 0 ${TOTAL_WIDTH} ${TOTAL_WIDTH}"
-    ><g stroke-width="${STROKE_WIDTH}" ${styleContent}>`;
+      width="${zoomedWidth}in"
+      height="${zoomedWidth}in"
+      viewBox="0 0 ${zoomedWidth} ${zoomedWidth}"
+    ><g transform="scale(${renderProps.zoom})" stroke-width="${STROKE_WIDTH}" ${styleContent}>`;
 
   // outer walls  
   svgContent += `
@@ -265,13 +302,14 @@ function exportToSVG(grid, text, renderProps) {
       if (dir === RIGHT || dir === LEFT) {
         if (dir === RIGHT && visitedRight[row][col] || dir === LEFT && visitedLeft[row][col]) {
           // we have already visited this cell, so we are done
-          let fill = 'none';
-          if (renderProps.mode === MODE_BLOCKS) {
-            fill = totalRotation < 0 ? 'black' : 'white';
-            if (renderProps.showIssues && totalRotation < 0 && isIsland) {
+          let fill = totalRotation < 0 ? 'black' : 'white';
+          if (totalRotation < 0 && isIsland) {
+            designHasErrors = true;
+            if (renderProps.showIssues)
               fill = 'blue';
-            }
           }
+          if (renderProps.mode === MODE_OUTLINE)
+            fill = 'none';
           svgContent += `Z" style="fill:${fill};"/>`; // close path
           return;
         }
@@ -350,10 +388,48 @@ function exportToSVG(grid, text, renderProps) {
     </g>
   `;
 
+    // Add holes at the start and end
+    const holes = [[1,1], [grid.length - 2, grid[0].length - 2]];
+    for (let hole of holes) {
+      const [row, col] = hole;
+      const isCovered = grid[row][col];
+      designHasErrors ||= isCovered;
+      if (isCovered && !renderProps.showIssues) {
+        continue;
+      }
+      const x = col * CELL_SIZE + CELL_SIZE / 2;
+      const y = row * CELL_SIZE + CELL_SIZE / 2;
+      const color =  isCovered ? 'blue' : '#CCCCCC';
+      if (renderProps.mode === MODE_BLOCKS)
+        svgContent += `<circle cx="${x}" cy="${y}" r="${BALL_HOLE_RADIUS}" fill="none" stroke="${color}"/>`;
+    }
+
+    // look for bad diagonals
+    if (renderProps.validateDesign || renderProps.showIssues) {
+      for (let row = 1; row < grid.length - 2; row++) {
+        for (let col = 1; col < grid[0].length - 2; col++) {
+          if (grid[row][col] && grid[row + 1][col + 1] && !grid[row + 1][col] && !grid[row][col + 1] ||
+              !grid[row][col] && !grid[row + 1][col + 1] && grid[row + 1][col] && grid[row][col + 1]
+          ) {
+            designHasErrors = true;
+            if (renderProps.showIssues) {
+              const warningSize = CELL_SIZE / 2;
+              const x = col * CELL_SIZE + CELL_SIZE - warningSize / 2;
+              const y = row * CELL_SIZE + CELL_SIZE - warningSize / 2;
+              svgContent += `<rect x="${x}" y="${y}" width="${warningSize}" height="${warningSize}" fill="none" stroke="blue"/>`;
+            }
+        }
+      }
+    }
+  }
+  
+
   svgContent += `<text x="${TOTAL_WIDTH / 2}" y="${CELL_SIZE / 2}" dominant-baseline="middle" text-anchor="middle" fill="${ENGRAVING_COLOR}" stroke="none" font-size="${FONT_SIZE}" font-family="Sans,Arial">${escapeSpecialChars(text)}</text>`
 
   svgContent += `</g></svg>`;
-
+  if (renderProps.validateDesign && designHasErrors) {
+    return null;
+  }
   return svgContent
 }
 
