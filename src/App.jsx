@@ -13,19 +13,20 @@ const INTERIOR_FILLET_RADIUS = CELL_SIZE / 8;
 const EXTERIOR_FILLET_RADIUS = CELL_SIZE / 4;
 const SCREW_HOLE_OFFSET = 0.01875; // how far to move the screw hole along both x and y axes towards the center
 
+const FONT_SIZE = 0.13; // for the engraving text
+
+const ENGRAVING_COLOR = '#AAAAAA'; // grey
+
 // How wide we draw the cut lines.
 // Probably irrelevant to the laser cutter but might matter
 // if cutting mode set to fill
 const STROKE_WIDTH = 0.01;
 
-const DPI = 96;
+const DPI = 96; // pixels per inch
 
-// const CIRCLE_OFFSETS = {
-//   topLeft: { x: C_OFF, y: C_OFF },
-//   topRight: { x: -C_OFF, y: C_OFF },
-//   bottomLeft: { x: C_OFF, y: -C_OFF },
-//   bottomRight: { x: -C_OFF, y: -C_OFF }
-// };
+
+
+const MODE_BLOCKS = 0, MODE_OUTLINE = 1;
 
 export default function App() {
   const gridSize = 16; // Define the size of the grid (16x16)
@@ -39,7 +40,7 @@ export default function App() {
     )
   );
 
-  const [showSVG, setShowSVG] = useState(false);
+  const [mode, setMode] = useState(MODE_BLOCKS);
 
   // Create a state to store text input for the top row
   const [topText, setTopText] = useState("Your Name Here");
@@ -50,25 +51,28 @@ export default function App() {
     setTopText(value.slice(0, 45)); // Limit input length to 45 characters to fit within the box without overflow
   };
 
+  const renderProps = {
+    showIssues: false,
+    mode: mode,
+  };
+
   return <div>
-    <button onClick={() => downloadSVG(exportToSVG(grid, topText))}>Export</button>
-    <button onClick={() => setShowSVG(!showSVG)}>{showSVG ? 'Show Blocks' : 'Show Outline'}</button>
+    <button onClick={() => downloadSVG(exportToSVG(grid, topText, {mode: MODE_OUTLINE}))}>Export</button>
+    <button onClick={() => setMode(MODE_BLOCKS)}>Show Blocks</button>
+    <button onClick={() => setMode(MODE_OUTLINE)}>Show Outline</button>
     <div style={{
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
       margin: `20px auto`
     }}>
-    {showSVG ?
-    <img
-      src={"data:image/svg+xml ;charset=utf-8," + encodeURIComponent(exportToSVG(grid, topText))} alt="SVG Preview"
-    /> :
     <Grid
       grid={grid}
       setGrid={setGrid}
       topText={topText}
+      renderProps={renderProps}
       handleTextChange={handleTextChange}
-    />}
+    />
     </div>
   </div>
 }
@@ -137,7 +141,7 @@ export default function App() {
   className="noselect">
     <img
     draggable="false"
-  src={"data:image/svg+xml ;charset=utf-8," + encodeURIComponent(exportToSVG(grid, props.topText))} alt="SVG Preview"
+  src={"data:image/svg+xml ;charset=utf-8," + encodeURIComponent(exportToSVG(grid, props.topText, props.renderProps))} alt="SVG Preview"
   onPointerDown={(e) => onDown(...getCoord(e))}
   onPointerMove={(e) => onMove(...getCoord(e))}
   onPointerUp={onUp}
@@ -145,7 +149,7 @@ export default function App() {
 
 }
 
-function exportToSVG(grid, text) {
+function exportToSVG(grid, text, renderProps) {
 
   const wallsVertical = Array(grid.length - 2).fill().map((_, rowIndex) =>
     Array(grid[0].length - 1).fill().map((_, colIndex) => {
@@ -167,13 +171,14 @@ function exportToSVG(grid, text) {
     })
   );
 
-  const style = `fill:none;stroke:black`;
+  const styleContent =  renderProps.mode === MODE_OUTLINE ? `fill="none" stroke="black"` : `fill="black" stroke="none"`;
+
   let svgContent = `<svg
     xmlns="http://www.w3.org/2000/svg"
       width="${TOTAL_WIDTH}in"
       height="${TOTAL_WIDTH}in"
       viewBox="0 0 ${TOTAL_WIDTH} ${TOTAL_WIDTH}"
-    ><g stroke-width="${STROKE_WIDTH}">`;
+    ><g stroke-width="${STROKE_WIDTH}" ${styleContent}>`;
 
     // outer walls  
     svgContent += `
@@ -188,7 +193,7 @@ function exportToSVG(grid, text) {
       V ${BORDER_RADIUS} 
       A ${BORDER_RADIUS} ${BORDER_RADIUS} 0 0 1 ${BORDER_RADIUS} 0 
       Z
-    " style="fill:black;stroke:black"/>`;
+    "/>`;
 
   const visitedRight = Array(grid.length).fill().map((_, __) =>
     Array(grid[0].length).fill(false)
@@ -247,11 +252,14 @@ function exportToSVG(grid, text) {
       if (dir === RIGHT || dir === LEFT) {
         if (dir === RIGHT && visitedRight[row][col] || dir === LEFT && visitedLeft[row][col]) {
           // we have already visited this cell, so we are done
-          let fill = totalRotation < 0 ? 'black': 'white';
-          if (totalRotation < 0 && isIsland) {
-            fill = 'blue';
+          let fill = 'none';
+          if (renderProps.mode === MODE_BLOCKS) {
+            fill = totalRotation < 0 ? 'black': 'white';
+            if (renderProps.showIssues && totalRotation < 0 && isIsland) {
+              fill = 'blue';
+            }
           }
-          svgContent += `Z" style="fill:${fill}; stroke:black"/>`; // close path
+          svgContent += `Z" style="fill:${fill};"/>`; // close path
           return;
         }
         if (dir === RIGHT)
@@ -319,9 +327,9 @@ function exportToSVG(grid, text) {
 
   // Add white circles inside the four corner cells
   const circleOffset = CELL_SIZE / 2 + SCREW_HOLE_OFFSET;
-
+  const screwHoleStyle = renderProps.mode === MODE_BLOCKS ? `fill="white" stroke="none"` : `fill="none" stroke="black"`;
   svgContent += `
-    <g fill="white" stroke="black">
+    <g ${screwHoleStyle}>
       <circle cx="${circleOffset}" cy="${circleOffset}" r="${SCREW_HOLE_RADIUS}"/> <!-- Top-left -->
       <circle cx="${TOTAL_WIDTH - circleOffset}" cy="${circleOffset}" r="${SCREW_HOLE_RADIUS}"/> <!-- Top-right -->
       <circle cx="${circleOffset}" cy="${TOTAL_WIDTH - circleOffset}" r="${SCREW_HOLE_RADIUS}"/> <!-- Bottom-left -->
@@ -329,7 +337,7 @@ function exportToSVG(grid, text) {
     </g>
   `;
 
-  svgContent += `<text x="50%" y="${CELL_SIZE / 2}" dominant-baseline="middle" text-anchor="middle" fill="none" stroke="red" font-size="0.1" font-family="Sans,Arial">${text}</text>`
+  svgContent += `<text x="${TOTAL_WIDTH / 2}" y="${CELL_SIZE / 2}" dominant-baseline="middle" text-anchor="middle" fill="${ENGRAVING_COLOR}" stroke="none" font-size="${FONT_SIZE}" font-family="Sans,Arial">${text}</text>`
 
   svgContent += `</g></svg>`;
 
