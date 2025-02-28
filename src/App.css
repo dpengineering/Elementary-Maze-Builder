@@ -36,26 +36,5 @@ button {
     transform: translate(-50%, -50%); /* Center circles properly */
 }
 
-#textDiv {
-    grid-column: 2 / 16; /* Stretch across columns 2 to 15 */
-    grid-row: 1; /* Stay in the first row */
-    background-color: black; /* Match border color */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-#textDiv > input {
-    width: 100%;
-    height: 100%;
-    text-align: center;
-    text-transform: uppercase;
-    border: none;
-    background: transparent;
-    color: white;
-    outline: none; /* remove focus outline */
-    caret-color: white; /* Make cursor color white */
-}
-
 
 

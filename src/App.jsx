@@ -9,7 +9,7 @@ const CELL_SIZE = TOTAL_WIDTH / CELLS_PER_COL;
 const BORDER_RADIUS = CELL_SIZE / 2;
 const SCREW_HOLE_RADIUS = CELL_SIZE / 4;
 // TODO Y'all can figure out what these values are exactly supposed to be
-const INTERIOR_FILLET_RADIUS = CELL_SIZE / 8; 
+const INTERIOR_FILLET_RADIUS = CELL_SIZE / 8;
 const EXTERIOR_FILLET_RADIUS = CELL_SIZE / 4;
 const SCREW_HOLE_OFFSET = 0.01875; // how far to move the screw hole along both x and y axes towards the center
 
@@ -28,6 +28,14 @@ const DPI = 96; // pixels per inch
 
 const MODE_BLOCKS = 0, MODE_OUTLINE = 1;
 
+function escapeSpecialChars(text) {
+  return text.replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 export default function App() {
   const gridSize = 16; // Define the size of the grid (16x16)
 
@@ -43,12 +51,12 @@ export default function App() {
   const [mode, setMode] = useState(MODE_BLOCKS);
 
   // Create a state to store text input for the top row
-  const [topText, setTopText] = useState("Your Name Here");
+  const [topText, setTopText] = useState("<Your Name Here>");
 
   // Function to handle text input changes
   const handleTextChange = (event) => {
-    const value = event.target.value.toUpperCase(); // Convert input to uppercase for consistency
-    setTopText(value.slice(0, 45)); // Limit input length to 45 characters to fit within the box without overflow
+    let value = event.target.value.toUpperCase(); // Convert input to uppercase for consistency
+    setTopText(value.slice(0,28)); // Limit input length to 45 characters to fit within the box without overflow
   };
 
   const renderProps = {
@@ -57,32 +65,36 @@ export default function App() {
   };
 
   return <div>
-    <button onClick={() => downloadSVG(exportToSVG(grid, topText, {mode: MODE_OUTLINE}))}>Export</button>
+    <button onClick={() => downloadSVG(exportToSVG(grid, topText, { mode: MODE_OUTLINE }), topText)}>Export</button>
     <button onClick={() => setMode(MODE_BLOCKS)}>Show Blocks</button>
     <button onClick={() => setMode(MODE_OUTLINE)}>Show Outline</button>
+    <input
+      type="text"
+      value={topText}
+      onChange={handleTextChange}
+    />
     <div style={{
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
       margin: `20px auto`
     }}>
-    <Grid
-      grid={grid}
-      setGrid={setGrid}
-      topText={topText}
-      renderProps={renderProps}
-      handleTextChange={handleTextChange}
-    />
+      <Grid
+        grid={grid}
+        setGrid={setGrid}
+        topText={topText}
+        renderProps={renderProps}
+      />
     </div>
   </div>
 }
 
-  function Grid(props) {
-    const gridSize = props.grid.length;
-    const grid = props.grid;
-    const setGrid = props.setGrid;
+function Grid(props) {
+  const gridSize = props.grid.length;
+  const grid = props.grid;
+  const setGrid = props.setGrid;
 
-     // Function to toggle the color of a square when clicked (black/white), except for perimeter cells
+  // Function to toggle the color of a square when clicked (black/white), except for perimeter cells
   const toggleCell = (row, col) => {
     if (row === 0 || row === gridSize - 1 || col === 0 || col === gridSize - 1) return; // Ignore border clicks
 
@@ -127,25 +139,26 @@ export default function App() {
     setDraggingMode(null);
   };
 
+  const cellSizePixels = CELL_SIZE * DPI;
+
   const getCoord = (e) => {
     let rect = e.currentTarget.getBoundingClientRect();
     let x = e.clientX - rect.left;
     let y = e.clientY - rect.top;
-    const cellSizePixels = CELL_SIZE * DPI;
     let row = Math.floor(y / cellSizePixels);
     let col = Math.floor(x / cellSizePixels);
     return [row, col];
   }
 
   return <div
-  className="noselect">
+    className="noselect">
     <img
-    draggable="false"
-  src={"data:image/svg+xml ;charset=utf-8," + encodeURIComponent(exportToSVG(grid, props.topText, props.renderProps))} alt="SVG Preview"
-  onPointerDown={(e) => onDown(...getCoord(e))}
-  onPointerMove={(e) => onMove(...getCoord(e))}
-  onPointerUp={onUp}
-/></div>;
+      draggable="false"
+      src={"data:image/svg+xml ;charset=utf-8," + encodeURIComponent(exportToSVG(grid, props.topText, props.renderProps))} alt="SVG Preview"
+      onPointerDown={(e) => onDown(...getCoord(e))}
+      onPointerMove={(e) => onMove(...getCoord(e))}
+      onPointerUp={onUp}
+    /></div>;
 
 }
 
@@ -171,7 +184,7 @@ function exportToSVG(grid, text, renderProps) {
     })
   );
 
-  const styleContent =  renderProps.mode === MODE_OUTLINE ? `fill="none" stroke="black"` : `fill="black" stroke="none"`;
+  const styleContent = renderProps.mode === MODE_OUTLINE ? `fill="none" stroke="black"` : `fill="black" stroke="none"`;
 
   let svgContent = `<svg
     xmlns="http://www.w3.org/2000/svg"
@@ -180,8 +193,8 @@ function exportToSVG(grid, text, renderProps) {
       viewBox="0 0 ${TOTAL_WIDTH} ${TOTAL_WIDTH}"
     ><g stroke-width="${STROKE_WIDTH}" ${styleContent}>`;
 
-    // outer walls  
-    svgContent += `
+  // outer walls  
+  svgContent += `
     <path d="
       M ${BORDER_RADIUS} 0 
       H ${TOTAL_WIDTH - BORDER_RADIUS} 
@@ -254,7 +267,7 @@ function exportToSVG(grid, text, renderProps) {
           // we have already visited this cell, so we are done
           let fill = 'none';
           if (renderProps.mode === MODE_BLOCKS) {
-            fill = totalRotation < 0 ? 'black': 'white';
+            fill = totalRotation < 0 ? 'black' : 'white';
             if (renderProps.showIssues && totalRotation < 0 && isIsland) {
               fill = 'blue';
             }
@@ -268,7 +281,7 @@ function exportToSVG(grid, text, renderProps) {
           visitedLeft[row][col] = true;
       }
 
-      
+
 
       // coordinates for a line, which change depending which edge we're following
       const colPos = ((dir === RIGHT || dir === BOTTOM) ? col + 1 : col);
@@ -337,18 +350,18 @@ function exportToSVG(grid, text, renderProps) {
     </g>
   `;
 
-  svgContent += `<text x="${TOTAL_WIDTH / 2}" y="${CELL_SIZE / 2}" dominant-baseline="middle" text-anchor="middle" fill="${ENGRAVING_COLOR}" stroke="none" font-size="${FONT_SIZE}" font-family="Sans,Arial">${text}</text>`
+  svgContent += `<text x="${TOTAL_WIDTH / 2}" y="${CELL_SIZE / 2}" dominant-baseline="middle" text-anchor="middle" fill="${ENGRAVING_COLOR}" stroke="none" font-size="${FONT_SIZE}" font-family="Sans,Arial">${escapeSpecialChars(text)}</text>`
 
   svgContent += `</g></svg>`;
 
   return svgContent
 }
 
-function downloadSVG(svgContent) {
+function downloadSVG(svgContent, nameText) {
   // Create and trigger the download
   const blob = new Blob([svgContent], { type: "image/svg+xml" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = "maze.svg";
+  link.download = "maze_"+ nameText +".svg";
   link.click();
 }
