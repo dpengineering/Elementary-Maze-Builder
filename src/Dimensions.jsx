@@ -1,6 +1,6 @@
 // Dimensions (in inches)
 
-export const TOTAL_WIDTH = 3.95;
+export const TOTAL_WIDTH = 4.05;
 export const CELLS_PER_COL = 16;
 export const CELL_SIZE = TOTAL_WIDTH / CELLS_PER_COL;
 

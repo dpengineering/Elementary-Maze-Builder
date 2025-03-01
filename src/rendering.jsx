@@ -268,9 +268,8 @@ export function exportToSVG(grid, text, renderProps) {
     function drawStud(x,y, color, shadowColor) {
         const OFFSET = CELL_SIZE / 10;
         return `<circle cx="${x + OFFSET}" cy="${y + OFFSET}" r="${CELL_SIZE * 0.27}" stroke="none" fill="${shadowColor}"/>` +
-        `<circle cx="${x}" cy="${y}" r="${CELL_SIZE * 0.3}" stroke="none" fill="${color}"/>` +
-        `<text x="${x}" y="${y}" dominant-baseline="middle" text-anchor="middle" fill="${shadowColor}" stroke="none" font-size="0.04" font-family="Sans,Arial" font-style="italic">DPEA</text>`;
-    }
+        `<circle cx="${x}" cy="${y}" r="${CELL_SIZE * 0.3}" stroke="none" fill="${color}"/>`
+      }
     function drawBrick(row, col) {
         const x = col * CELL_SIZE;
         const y = row * CELL_SIZE;
