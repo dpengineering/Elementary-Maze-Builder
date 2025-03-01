@@ -1,4 +1,4 @@
-import { MODE_OUTLINE, MODE_FILLED } from './App';
+import { MODE_OUTLINE, MODE_FILLED, MODE_BRICKS } from './App';
 import {TOTAL_WIDTH, CELL_SIZE, BORDER_RADIUS, SCREW_HOLE_RADIUS, BALL_HOLE_RADIUS, INTERIOR_FILLET_RADIUS, EXTERIOR_FILLET_RADIUS, SCREW_HOLE_OFFSET, FONT_SIZE, ENGRAVING_COLOR} from './Dimensions';
 // How wide we draw the cut lines.
 // Probably irrelevant to the laser cutter but might matter
@@ -14,6 +14,9 @@ function escapeSpecialChars(text) {
 }
 
 export function exportToSVG(grid, text, renderProps) {
+    if (renderProps.mode === MODE_BRICKS) {
+        return exportBricks(grid, renderProps);
+    }
     let designHasErrors = false;
     const wallsVertical = Array(grid.length - 2).fill().map((_, rowIndex) =>
       Array(grid[0].length - 1).fill().map((_, colIndex) => {
@@ -250,5 +253,57 @@ export function exportToSVG(grid, text, renderProps) {
     if (renderProps.validateDesign && designHasErrors) {
       return null;
     }
-    return svgContent
+    return svgContent;
+  }
+
+  const BRICK_COLORS = [
+    // color, shadow, highlight
+    ['#fafafa', '#dbdbdb', '#faf7f7'],
+    ['#e62517', '#c22519', '#fa2b1b'],
+    ['#ffd700', '#dbba04', '#ffdb12'],
+    ['#025ccc', '#0251b3', '#026bed']
+  ];
+
+  function exportBricks(grid, renderProps) {
+    function drawStud(x,y, color, shadowColor) {
+        const OFFSET = CELL_SIZE / 10;
+        return `<circle cx="${x + OFFSET}" cy="${y + OFFSET}" r="${CELL_SIZE * 0.27}" stroke="none" fill="${shadowColor}"/>` +
+        `<circle cx="${x}" cy="${y}" r="${CELL_SIZE * 0.3}" stroke="none" fill="${color}"/>` +
+        `<text x="${x}" y="${y}" dominant-baseline="middle" text-anchor="middle" fill="${shadowColor}" stroke="none" font-size="0.04" font-family="Sans,Arial" font-style="italic">DPEA</text>`;
+    }
+    function drawBrick(row, col) {
+        const x = col * CELL_SIZE;
+        const y = row * CELL_SIZE;
+
+        const colors = BRICK_COLORS[grid[row][col]];
+        const mainColor = colors[0];
+        const shadowColor = colors[1];
+        const highlightColor = colors[2];
+
+        return `<rect x="${x}" y="${y}" width="${CELL_SIZE}" height="${CELL_SIZE}" fill="${mainColor}" stroke="${shadowColor}"/>` +
+            drawStud(x + CELL_SIZE / 2, y + CELL_SIZE / 2, highlightColor, shadowColor);
+    }
+
+    if (renderProps.zoom == null) {
+        renderProps.zoom = 1;
+      }
+    
+      const zoomedWidth = TOTAL_WIDTH * renderProps.zoom;
+    
+      let svgContent = `<svg
+        xmlns="http://www.w3.org/2000/svg"
+          width="${zoomedWidth}in"
+          height="${zoomedWidth}in"
+          viewBox="0 0 ${zoomedWidth} ${zoomedWidth}"
+        ><g transform="scale(${renderProps.zoom})" stroke-width="${STROKE_WIDTH/5}">`;
+
+        for (let row = 0; row < grid.length; row++) {
+            for (let col = 0; col < grid[0].length; col++) {
+                svgContent += drawBrick(row, col);
+            }
+        }
+
+        svgContent += `</g></svg>`;
+        return svgContent;
+
   }

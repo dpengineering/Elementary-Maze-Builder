@@ -2,7 +2,8 @@ import { useEffect, useState, useRef} from "react";
 import './App.css';
 
 import iconOutline from './assets/outline.svg';
-import iconFilled from './assets/blocks.svg';
+import iconBrick from './assets/bricks.svg';
+import iconFilled from './assets/fill.svg';
 
 import { exportToSVG } from './rendering';
 import * as D from './Dimensions';
@@ -10,10 +11,10 @@ import * as D from './Dimensions';
 
 const DPI = 96; // pixels per inch
 
-export const MODE_FILLED = 0, MODE_OUTLINE = 1;
+export const MODE_FILLED = 0, MODE_OUTLINE = 1, MODE_BRICKS = 2;
 
 export default function App() {
-  // Create the grid state: Border squares (1) and empty interior squares (0)
+  // Create the grid state: Border squares (1,2,3) and empty interior squares (0)
   const [grid, setGrid] = useState(
     Array(D.CELLS_PER_COL).fill().map((_, rowIndex) =>
       Array(D.CELLS_PER_COL).fill().map((_, colIndex) =>
@@ -106,15 +107,20 @@ export default function App() {
 }
 
 function ModeSelector(props) {
-  return <div className="rating-container"><div className="rating">
+  return <div className="mode-container"><div className="mode">
     <label htmlFor="outlineIcon">
-      <input type="radio" name="rating" className="outlineIcon" id="outlineIcon" value={MODE_OUTLINE} checked={props.mode == MODE_OUTLINE} onChange={props.onChange} />
+      <input type="radio" name="mode" className="outlineIcon" id="outlineIcon" value={MODE_OUTLINE} checked={props.mode == MODE_OUTLINE} onChange={props.onChange} />
       <img src={iconOutline} />
     </label>
 
     <label htmlFor="filledIcon">
-      <input type="radio" name="rating" className="filledIcon" id="filledIcon" value={MODE_FILLED} checked={props.mode == MODE_FILLED} onChange={props.onChange} />
+      <input type="radio" name="mode" className="filledIcon" id="filledIcon" value={MODE_FILLED} checked={props.mode == MODE_FILLED} onChange={props.onChange} />
       <img src={iconFilled} />
+    </label>
+
+    <label htmlFor="brickIcon">
+      <input type="radio" name="mode" className="brickIcon" id="brickIcon" value={MODE_BRICKS} checked={props.mode == MODE_BRICKS} onChange={props.onChange} />
+      <img src={iconBrick} />
     </label>
   </div></div>
 
@@ -126,12 +132,12 @@ function Grid(props) {
   const setGrid = props.setGrid;
 
   // Function to toggle the color of a square when clicked (black/white), except for perimeter cells
-  const toggleCell = (row, col) => {
+  const toggleCell = (row, col, color) => {
     if (row === 0 || row === gridSize - 1 || col === 0 || col === gridSize - 1) return; // Ignore border clicks
 
     // Create a new grid with the clicked cell toggled
     const newGrid = grid.map((r, i) =>
-      r.map((c, j) => (i === row && j === col ? 1 - c : c))
+      r.map((c, j) => (i === row && j === col ? color : c))
     );
     props.setGrid(newGrid); // Update state with the modified grid
   };
@@ -139,12 +145,14 @@ function Grid(props) {
   const [draggingMode, setDraggingMode] = useState(null);
   const onDown = (row, col) => {
     if (row === 0 || row === gridSize - 1 || col === 0 || col === gridSize - 1) {
-      if (draggingMode == null) {
+      if (draggingMode === null) {
         setDraggingMode(1);
+        return;
       }
     }
-    toggleCell(row, col);
-    setDraggingMode(1 - grid[row][col]);
+    const newColor = grid[row][col] ? 0 : 1;
+    toggleCell(row, col, newColor);
+    setDraggingMode(newColor);
   };
 
   const onMove = (row, col) => {
@@ -154,14 +162,15 @@ function Grid(props) {
     if (row < 0 || row >= gridSize || col < 0 || col >= gridSize) {
       return; // Ignore out-of-bounds clicks
     }
-    if (grid[row][col] === draggingMode) {
+    if (grid[row][col] && draggingMode || !grid[row][col] && !draggingMode) {
       return; // Ignore if the cell is already in the desired state
     }
     if (row === 0 || row === gridSize - 1 || col === 0 || col === gridSize - 1) return; // Ignore border clicks
 
+    const newColor = draggingMode ? Math.floor(1 + Math.random() * 3) : 0;
     // Create a new grid with the clicked cell toggled
     const newGrid = grid.map((r, i) =>
-      r.map((c, j) => (i === row && j === col ? draggingMode : c))
+      r.map((c, j) => (i === row && j === col ? newColor : c))
     );
     setGrid(newGrid); // Update state with the modified grid
   };

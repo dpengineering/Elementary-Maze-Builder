@@ -36,7 +36,7 @@ button {
     transform: translate(-50%, -50%); /* Center circles properly */
 }
 
-.rating-container {
+.mode-container {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -47,13 +47,13 @@ button {
   width: 100%;
 }
 
-.rating {
+.mode {
   background-color: rgba(0, 0, 16, 0.8);
   padding: 0.4rem 0.4rem 0.1rem 0.4rem;
   border-radius: 2.2rem;
 }
 
-  .rating img {
+  .mode img {
   fill: rgb(242, 242, 242);
   height: 2.6rem;
   width: 2.6rem;
@@ -86,5 +86,10 @@ input[class="filledIcon"]:focus + img {
   filter: invert(0.5) sepia(1) saturate(5) hue-rotate(100deg);
 }
 
+input[class="brickIcon"]:hover + img,
+input[class="brickIcon"]:checked + img,
+input[class="brickIcon"]:focus + img {
+  filter: invert(0.5) sepia(1) saturate(5) hue-rotate(330deg);
+}
 
 
