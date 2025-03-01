@@ -1,6 +1,9 @@
 import { useEffect, useState, useRef} from "react";
 import './App.css';
 
+import iconOutline from './assets/outline.svg';
+import iconFilled from './assets/blocks.svg';
+
 // Dimensions (in inches)
 const TOTAL_WIDTH = 3.95;
 const CELLS_PER_COL = 16;
@@ -27,7 +30,7 @@ const DPI = 96; // pixels per inch
 
 
 
-const MODE_BLOCKS = 0, MODE_OUTLINE = 1;
+const MODE_FILLED = 0, MODE_OUTLINE = 1;
 
 function escapeSpecialChars(text) {
   return text.replace(/&/g, "&amp;")
@@ -38,18 +41,16 @@ function escapeSpecialChars(text) {
 }
 
 export default function App() {
-  const gridSize = 16; // Define the size of the grid (16x16)
-
   // Create the grid state: Border squares (1) and empty interior squares (0)
   const [grid, setGrid] = useState(
-    Array(gridSize).fill().map((_, rowIndex) =>
-      Array(gridSize).fill().map((_, colIndex) =>
-        rowIndex === 0 || rowIndex === gridSize - 1 || colIndex === 0 || colIndex === gridSize - 1 ? 1 : 0
+    Array(CELLS_PER_COL).fill().map((_, rowIndex) =>
+      Array(CELLS_PER_COL).fill().map((_, colIndex) =>
+        rowIndex === 0 || rowIndex === CELLS_PER_COL - 1 || colIndex === 0 || colIndex === CELLS_PER_COL - 1 ? 1 : 0
       )
     )
   );
 
-  const [mode, setMode] = useState(MODE_BLOCKS);
+  const [mode, setMode] = useState(MODE_FILLED);
   const [showIssues, setShowIssues] = useState(false);
   const [zoomPercent, setZoomPercent] = useState(200);
 
@@ -60,11 +61,6 @@ export default function App() {
       clearInterval(intervalRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    clearInterval(intervalRef.current);
-    setShowIssues(false);
-  }, [mode]);
 
   // Create a state to store text input for the top row
   const [topText, setTopText] = useState("<Your Name Here>");
@@ -81,10 +77,12 @@ export default function App() {
     zoom: zoomPercent / 100,
   };
 
+  console.log(mode);
+
   const onExport = () => {
-    const svg = exportToSVG(grid, topText, { mode: MODE_OUTLINE, validateDesign: true});
+    const svg = exportToSVG(grid, topText, { mode: MODE_FILLED, validateDesign: true});
     if (svg == null) {
-      setMode(MODE_BLOCKS);
+      setMode(MODE_FILLED);
       setShowIssues(true);
       clearInterval(intervalRef.current);
       let counter = 0;
@@ -100,20 +98,33 @@ export default function App() {
   };
 
   return <div>
-    <button onClick={onExport}>Export</button>
-    <button onClick={() => setMode(MODE_BLOCKS)}>Show Blocks</button>
-    <button onClick={() => setMode(MODE_OUTLINE)}>Show Outline</button>
-    <input
-      type="text"
-      value={topText}
-      onChange={handleTextChange}
-    />
+    <div style={{ display: "flex", justifyContent: "space-between", margin: `20px auto` }}>
+      <button onClick={onExport}>Export</button>
+      <ModeSelector mode={mode} onChange={(event) => {
+        setMode(parseInt(event.target.value));
+        clearInterval(intervalRef.current);
+        setShowIssues(false);
+      }} />
+      <input
+        type="text"
+        value={topText}
+        onChange={handleTextChange}
+      />
+      <button onClick={() => {
+        if (zoomPercent < 200) {
+          setZoomPercent(zoomPercent + 50);
+        } else {
+          setZoomPercent(100);
+        }
+      }}>Zoom {zoomPercent}%</button>
+    </div>
     <div style={{
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
       margin: `20px auto`
     }}>
+      
       <Grid
         grid={grid}
         setGrid={setGrid}
@@ -122,6 +133,21 @@ export default function App() {
       />
     </div>
   </div>
+}
+
+function ModeSelector(props) {
+  return <div className="rating-container"><div className="rating">
+    <label htmlFor="outlineIcon">
+      <input type="radio" name="rating" className="outlineIcon" id="outlineIcon" value={MODE_OUTLINE} checked={props.mode == MODE_OUTLINE} onChange={props.onChange} />
+      <img src={iconOutline} />
+    </label>
+
+    <label htmlFor="filledIcon">
+      <input type="radio" name="rating" className="filledIcon" id="filledIcon" value={MODE_FILLED} checked={props.mode == MODE_FILLED} onChange={props.onChange} />
+      <img src={iconFilled} />
+    </label>
+  </div></div>
+
 }
 
 function Grid(props) {
@@ -220,6 +246,10 @@ function exportToSVG(grid, text, renderProps) {
   );
 
   const styleContent = renderProps.mode === MODE_OUTLINE ? `fill="none" stroke="black"` : `fill="black" stroke="none"`;
+
+  if (renderProps.zoom == null) {
+    renderProps.zoom = 1;
+  }
 
   const zoomedWidth = TOTAL_WIDTH * renderProps.zoom;
 
@@ -378,7 +408,7 @@ function exportToSVG(grid, text, renderProps) {
 
   // Add white circles inside the four corner cells
   const circleOffset = CELL_SIZE / 2 + SCREW_HOLE_OFFSET;
-  const screwHoleStyle = renderProps.mode === MODE_BLOCKS ? `fill="white" stroke="none"` : `fill="none" stroke="black"`;
+  const screwHoleStyle = renderProps.mode === MODE_FILLED ? `fill="white" stroke="none"` : `fill="none" stroke="black"`;
   svgContent += `
     <g ${screwHoleStyle}>
       <circle cx="${circleOffset}" cy="${circleOffset}" r="${SCREW_HOLE_RADIUS}"/> <!-- Top-left -->
@@ -400,7 +430,7 @@ function exportToSVG(grid, text, renderProps) {
       const x = col * CELL_SIZE + CELL_SIZE / 2;
       const y = row * CELL_SIZE + CELL_SIZE / 2;
       const color =  isCovered ? 'blue' : '#CCCCCC';
-      if (renderProps.mode === MODE_BLOCKS)
+      if (renderProps.mode === MODE_FILLED)
         svgContent += `<circle cx="${x}" cy="${y}" r="${BALL_HOLE_RADIUS}" fill="none" stroke="${color}"/>`;
     }
 

@@ -36,5 +36,55 @@ button {
     transform: translate(-50%, -50%); /* Center circles properly */
 }
 
+.rating-container {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: justify;
+  -ms-flex-pack: justify;
+  justify-content: space-between;
+  padding: 0.4rem 0.8rem;
+  width: 100%;
+}
+
+.rating {
+  background-color: rgba(0, 0, 16, 0.8);
+  padding: 0.4rem 0.4rem 0.1rem 0.4rem;
+  border-radius: 2.2rem;
+}
+
+  .rating img {
+  fill: rgb(242, 242, 242);
+  height: 2.6rem;
+  width: 2.6rem;
+  margin: 0.2rem;
+}
+
+input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+}
+
+input[type="radio"] + img {
+  -webkit-transition: all 0.2s;
+  transition: all 0.2s;
+}
+
+input + img {
+  cursor: pointer;
+}
+
+input[class="outlineIcon"]:hover + img,
+input[class="outlineIcon"]:checked + img,
+input[class="outlineIcon"]:focus + img {
+  filter: invert(0.5) sepia(1) saturate(5) hue-rotate(175deg);
+}
+
+input[class="filledIcon"]:hover + img,
+input[class="filledIcon"]:checked + img,
+input[class="filledIcon"]:focus + img {
+  filter: invert(0.5) sepia(1) saturate(5) hue-rotate(100deg);
+}
+
 
 
