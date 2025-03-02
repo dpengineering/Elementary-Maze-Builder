@@ -1,5 +1,5 @@
-import { MODE_OUTLINE, MODE_FILLED, MODE_BRICKS } from './App';
-import {TOTAL_WIDTH, CELL_SIZE, BORDER_RADIUS, SCREW_HOLE_RADIUS, BALL_HOLE_RADIUS, INTERIOR_FILLET_RADIUS, EXTERIOR_FILLET_RADIUS, SCREW_HOLE_OFFSET, FONT_SIZE, ENGRAVING_COLOR} from './Dimensions';
+import { MODE_OUTLINE, MODE_BRICKS } from './App';
+import {TOTAL_WIDTH, CELL_SIZE, BORDER_RADIUS, SCREW_HOLE_RADIUS, BALL_HOLE_RADIUS, INTERIOR_FILLET_RADIUS, EXTERIOR_FILLET_RADIUS, SCREW_HOLE_OFFSET, FONT_SIZE, ENGRAVING_COLOR, CELLS_PER_COL, TEXT_Y_OFFSET} from './Dimensions';
 // How wide we draw the cut lines.
 // Probably irrelevant to the laser cutter but might matter
 // if cutting mode set to fill
@@ -13,7 +13,7 @@ function escapeSpecialChars(text) {
     .replace(/'/g, "&apos;");
 }
 
-export function exportToSVG(grid, text, renderProps) {
+export function exportToSVG(grid, engravings, renderProps) {
     if (renderProps.mode === MODE_BRICKS) {
         return exportBricks(grid, renderProps);
     }
@@ -201,7 +201,7 @@ export function exportToSVG(grid, text, renderProps) {
   
     // Add white circles inside the four corner cells
     const circleOffset = CELL_SIZE / 2 + SCREW_HOLE_OFFSET;
-    const screwHoleStyle = renderProps.mode === MODE_FILLED ? `fill="white" stroke="none"` : `fill="none" stroke="black"`;
+    const screwHoleStyle = renderProps.mode !== MODE_OUTLINE ? `fill="white" stroke="none"` : `fill="none" stroke="black"`;
     svgContent += `
       <g ${screwHoleStyle}>
         <circle cx="${circleOffset}" cy="${circleOffset}" r="${SCREW_HOLE_RADIUS}"/> <!-- Top-left -->
@@ -223,7 +223,7 @@ export function exportToSVG(grid, text, renderProps) {
         const x = col * CELL_SIZE + CELL_SIZE / 2;
         const y = row * CELL_SIZE + CELL_SIZE / 2;
         const color =  isCovered ? 'blue' : '#CCCCCC';
-        if (renderProps.mode === MODE_FILLED)
+        if (renderProps.mode !== MODE_OUTLINE)
           svgContent += `<circle cx="${x}" cy="${y}" r="${BALL_HOLE_RADIUS}" fill="none" stroke="${color}"/>`;
       }
   
@@ -246,8 +246,28 @@ export function exportToSVG(grid, text, renderProps) {
       }
     }
     
-  
-    svgContent += `<text x="${TOTAL_WIDTH / 2}" y="${CELL_SIZE / 2}" dominant-baseline="middle" text-anchor="middle" fill="${ENGRAVING_COLOR}" stroke="none" font-size="${FONT_SIZE}" font-family="Sans,Arial">${escapeSpecialChars(text)}</text>`
+    for (let i = 0; i < engravings.length; i++) {
+      const {text, row, col, rotation} = engravings[i];
+      const x = col * CELL_SIZE;
+      const y = row * CELL_SIZE;
+      let width = (CELLS_PER_COL - 2) * CELL_SIZE;
+      let height = CELL_SIZE;
+      if (rotation === 90 || rotation === 270) {
+        const tmp = width;
+        width = height;
+        height = tmp;
+      }
+
+      const isSelected = renderProps.selectedEngraving === i;
+      const stroke = isSelected ? 'red' : 'none';
+      // draw rectangle around text
+      svgContent += `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="none" stroke="${stroke}"/>`;
+
+      svgContent += `<g transform="translate(${x + width / 2},${y + height / 2}) rotate(${rotation})">` +
+      `<text x="${0}" y="${TEXT_Y_OFFSET}" text-anchor="middle" fill="${ENGRAVING_COLOR}" stroke="none" font-size="${FONT_SIZE}" font-family="Sans,Arial">${escapeSpecialChars(text)}</text>`
+      + `</g>`;
+
+    }
   
     svgContent += `</g></svg>`;
     if (renderProps.validateDesign && designHasErrors) {

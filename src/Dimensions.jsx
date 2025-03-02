@@ -12,6 +12,7 @@ export const INTERIOR_FILLET_RADIUS = CELL_SIZE / 6;
 export const EXTERIOR_FILLET_RADIUS = CELL_SIZE / 10;
 export const SCREW_HOLE_OFFSET = 0.01875; // how far to move the screw hole along both x and y axes towards the center
 
-export const FONT_SIZE = 0.13; // for the engraving text
+export const FONT_SIZE = 0.14; // for the engraving text
+export const TEXT_Y_OFFSET = 0.05;
 
 export const ENGRAVING_COLOR = '#AAAAAA'; // grey
