@@ -64,7 +64,7 @@ export function Grid(props) {
         }
         if (row === 0 || row === gridSize - 1 || col === 0 || col === gridSize - 1) return; // Ignore border clicks
 
-        const newColor = draggingMode ? Math.floor(1 + Math.random() * 3) : 0;
+        const newColor = draggingMode ? 1 : 0;
         // Create a new grid with the clicked cell toggled
         const newGrid = grid.map((r, i) =>
             r.map((c, j) => (i === row && j === col ? newColor : c))
@@ -88,6 +88,7 @@ export function Grid(props) {
     }
 
     return <div
+        id="grid"
         className="noselect">
         <img
             draggable="false"

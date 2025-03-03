@@ -54,6 +54,7 @@ export default function App() {
   const [mode, setMode] = useState(MODE_BRICKS);
   const [showIssues, setShowIssues] = useState(false);
   const [zoomPercent, setZoomPercent] = useState(100);
+  const [basePlateColorIndex, setBasePlateColorIndex] = useState(0);
 
   const intervalRef = useRef(0);
   const inputRef = useRef(null);
@@ -94,6 +95,7 @@ export default function App() {
     mode: mode,
     zoom: zoomPercent / 100,
     selectedEngraving: selectedEngraving,
+    basePlateColor: D.BASEPLATE_COLORS[basePlateColorIndex]
   };
 
   const onExport = () => {
@@ -128,6 +130,21 @@ export default function App() {
     </div>;
   }
 
+  let baseplateColorPickerDiv = null;
+  if (mode === MODE_BRICKS) {
+    baseplateColorPickerDiv = <div>
+      <div id="baseplateColorPicker">
+        {D.BASEPLATE_COLORS.map((color, index) => {
+          return <button
+            key={index}
+            style={{backgroundColor: color[0]}}
+            onClick={() => setBasePlateColorIndex(index)}
+          />
+        })}
+      </div>
+    </div>;
+  }
+
 
   return <div>
     <div style={{ display: "flex", justifyContent: "space-between", margin: `20px auto` }}>
@@ -148,9 +165,11 @@ export default function App() {
     </div>
     <div style={{
       display: "flex",
-      flexDirection: "column",
+      flexDirection: "row",
       alignItems: "center",
-      margin: `20px auto`
+      margin: `20px auto`,
+      position: "relative",
+      justifyContent: "space-between",
     }}>
       
       <Grid
@@ -160,7 +179,9 @@ export default function App() {
         renderProps={renderProps}
         setSelectedEngraving={setSelectedEngraving}
       />
+      {baseplateColorPickerDiv}
     </div>
+    
   </div>
 }
 

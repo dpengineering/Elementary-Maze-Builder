@@ -20,3 +20,24 @@ export const BALL_HOLE_RADIUS = CELL_SIZE * 0.4;
 // color of anything being engraved
 export const ENGRAVING_DISPLAY_COLOR = '#AAAAAA'; // grey
 export const ENGRAVING_EXPORT_COLOR = 'red';
+
+// Lego colors
+export const BASEPLATE_COLORS = [
+    // color, shadow, highlight
+    ['#e62517', '#c01f15', '#eb2719'], // red
+    ['#fd8016', '#e67314', '#ff8518'], // orange
+    ['#ffd700', '#d1b700', '#ffdb04'], // yellow
+    ['#586e01', '#4d5f01', '#5e7601'], // dark green
+    ['#8aaf00', '#789900', '#8fb900'], // light green
+    ['#32c5bb', '#2ba99f', '#36c9bf'], // turquoise
+    ['#7dc2e9', '#6ba9c8', '#86caee'], // light blue
+    ['#d553b3', '#ba49a0', '#db57b8'], // purple
+    ['#b98ad0', '#a178b9', '#bf92d5'], // lilac
+    ['#f0b8db', '#d8a3c3', '#f2bddf'], // pink
+    ['#3f5968', '#364c57', '#445f6e'], // black
+];
+
+export const BRICK_COLOR = ['#a7a7a7', '#919191', '#ababab']; // grey
+
+
+

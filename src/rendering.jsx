@@ -1,5 +1,5 @@
 import { MODE_OUTLINE, MODE_BRICKS } from './App';
-import {TOTAL_WIDTH, CELL_SIZE, BORDER_RADIUS, SCREW_HOLE_RADIUS, BALL_HOLE_RADIUS, INTERIOR_FILLET_RADIUS, EXTERIOR_FILLET_RADIUS, SCREW_HOLE_OFFSET, FONT_SIZE, ENGRAVING_DISPLAY_COLOR, ENGRAVING_EXPORT_COLOR, CELLS_PER_COL, TEXT_Y_OFFSET} from './Dimensions';
+import {TOTAL_WIDTH, CELL_SIZE, BORDER_RADIUS, SCREW_HOLE_RADIUS, BALL_HOLE_RADIUS, INTERIOR_FILLET_RADIUS, EXTERIOR_FILLET_RADIUS, SCREW_HOLE_OFFSET, FONT_SIZE, ENGRAVING_DISPLAY_COLOR, ENGRAVING_EXPORT_COLOR, CELLS_PER_COL, TEXT_Y_OFFSET, BRICK_COLOR} from './Dimensions';
 // How wide we draw the cut lines.
 // Probably irrelevant to the laser cutter but might matter
 // if cutting mode set to fill
@@ -280,13 +280,6 @@ export function exportToSVG(grid, engravings, renderProps) {
     return svgContent;
   }
 
-  const BRICK_COLORS = [
-    // color, shadow, highlight
-    ['#fafafa', '#dbdbdb', '#faf7f7'],
-    ['#e62517', '#c22519', '#fa2b1b'],
-    ['#ffd700', '#dbba04', '#ffdb12'],
-    ['#025ccc', '#0251b3', '#026bed']
-  ];
 
   function exportBricks(grid, renderProps) {
     function drawStud(x,y, color, shadowColor) {
@@ -297,8 +290,10 @@ export function exportToSVG(grid, engravings, renderProps) {
     function drawBrick(row, col) {
         const x = col * CELL_SIZE;
         const y = row * CELL_SIZE;
-
-        const colors = BRICK_COLORS[grid[row][col]];
+        let colors = BRICK_COLOR;
+        if (!grid[row][col]) {
+          colors = renderProps.basePlateColor;
+        }
         const mainColor = colors[0];
         const shadowColor = colors[1];
         const highlightColor = colors[2];

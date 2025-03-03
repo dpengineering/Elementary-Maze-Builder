@@ -106,5 +106,23 @@ input[class="brickIcon"]:focus + img {
 #exportButton:hover {
   background-color: #005bbd;
 }
+/* style={{ display: "flex", justifyContent: "space-between", margin: `20px auto` }} */
+#baseplateColorPicker {
+  display: flex;
+  justify-content: "space-between";
+  margin: 20px auto;
+  flex-direction: column;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+#baseplateColorPicker > button {
+  margin-bottom: 2px;
+}
+
+#grid {
+  margin: auto
+}
 
 
