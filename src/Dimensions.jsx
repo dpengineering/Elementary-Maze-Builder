@@ -34,7 +34,8 @@ export const BASEPLATE_COLORS = [
     ['#d553b3', '#ba49a0', '#db57b8'], // purple
     ['#b98ad0', '#a178b9', '#bf92d5'], // lilac
     ['#f0b8db', '#d8a3c3', '#f2bddf'], // pink
-    ['#3f5968', '#364c57', '#445f6e'], // black
+    ['#5a5a5a', '#4e4e4e', '#616161'], // dark grey
+    ['#3a3a3a', '#323232', '#404040'], // black
 ];
 
 export const BRICK_COLOR = ['#a7a7a7', '#919191', '#ababab']; // grey
