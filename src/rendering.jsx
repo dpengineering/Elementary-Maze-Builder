@@ -1,5 +1,5 @@
 import { MODE_OUTLINE, MODE_BRICKS } from './App';
-import {TOTAL_WIDTH, CELL_SIZE, BORDER_RADIUS, SCREW_HOLE_RADIUS, BALL_HOLE_RADIUS, INTERIOR_FILLET_RADIUS, EXTERIOR_FILLET_RADIUS, SCREW_HOLE_OFFSET, FONT_SIZE, ENGRAVING_COLOR, CELLS_PER_COL, TEXT_Y_OFFSET} from './Dimensions';
+import {TOTAL_WIDTH, CELL_SIZE, BORDER_RADIUS, SCREW_HOLE_RADIUS, BALL_HOLE_RADIUS, INTERIOR_FILLET_RADIUS, EXTERIOR_FILLET_RADIUS, SCREW_HOLE_OFFSET, FONT_SIZE, ENGRAVING_DISPLAY_COLOR, ENGRAVING_EXPORT_COLOR, CELLS_PER_COL, TEXT_Y_OFFSET} from './Dimensions';
 // How wide we draw the cut lines.
 // Probably irrelevant to the laser cutter but might matter
 // if cutting mode set to fill
@@ -265,8 +265,10 @@ export function exportToSVG(grid, engravings, renderProps) {
         svgContent += `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="none" stroke="red"/>`;
       }
 
+      const textColor = renderProps.mode === MODE_OUTLINE ? ENGRAVING_EXPORT_COLOR : ENGRAVING_DISPLAY_COLOR;
+
       svgContent += `<g transform="translate(${x + width / 2},${y + height / 2}) rotate(${rotation})">` +
-      `<text x="${0}" y="${TEXT_Y_OFFSET}" text-anchor="middle" fill="${ENGRAVING_COLOR}" stroke="none" font-size="${FONT_SIZE}" font-family="Sans,Arial">${escapeSpecialChars(text)}</text>`
+      `<text x="${0}" y="${TEXT_Y_OFFSET}" text-anchor="middle" fill="${textColor}" stroke="none" font-size="${FONT_SIZE}" font-family="Sans,Arial">${escapeSpecialChars(text)}</text>`
       + `</g>`;
 
     }

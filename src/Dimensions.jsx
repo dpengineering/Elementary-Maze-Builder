@@ -18,4 +18,5 @@ export const BALL_HOLE_RADIUS = CELL_SIZE * 0.4;
 
 
 // color of anything being engraved
-export const ENGRAVING_COLOR = '#AAAAAA'; // grey
+export const ENGRAVING_DISPLAY_COLOR = '#AAAAAA'; // grey
+export const ENGRAVING_EXPORT_COLOR = 'red';
