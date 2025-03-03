@@ -8,7 +8,7 @@ export const BORDER_RADIUS = 0.115;
 export const SCREW_HOLE_RADIUS = 0.116 / 2;
 export const INTERIOR_FILLET_RADIUS = BORDER_RADIUS / 4;
 export const EXTERIOR_FILLET_RADIUS = BORDER_RADIUS / 4;
-export const SCREW_HOLE_OFFSET = 0.01875; // how far to move the screw hole along both x and y axes towards the center
+export const SCREW_HOLE_OFFSET = 0.03075; // how far to move the screw hole along both x and y axes towards the center
 
 export const FONT_SIZE = 0.14; // for the engraving text
 export const TEXT_Y_OFFSET = 0.05; // fudge factor to center the text
