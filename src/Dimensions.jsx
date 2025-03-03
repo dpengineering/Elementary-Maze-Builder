@@ -5,8 +5,7 @@ export const CELLS_PER_COL = 16;
 export const CELL_SIZE = TOTAL_WIDTH / CELLS_PER_COL;
 
 export const BORDER_RADIUS = 0.115;
-export const SCREW_HOLE_RADIUS = CELL_SIZE / 4;
-
+export const SCREW_HOLE_RADIUS = 0.116 / 2;
 export const INTERIOR_FILLET_RADIUS = BORDER_RADIUS / 4;
 export const EXTERIOR_FILLET_RADIUS = BORDER_RADIUS / 4;
 export const SCREW_HOLE_OFFSET = 0.01875; // how far to move the screw hole along both x and y axes towards the center
