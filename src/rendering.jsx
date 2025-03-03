@@ -259,9 +259,11 @@ export function exportToSVG(grid, engravings, renderProps) {
       }
 
       const isSelected = renderProps.selectedEngraving === i;
-      const stroke = isSelected ? 'red' : 'none';
-      // draw rectangle around text
-      svgContent += `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="none" stroke="${stroke}"/>`;
+      const stroke = isSelected && !renderProps.validateDesign ? 'red' : 'none';
+      if (isSelected && !renderProps.validateDesign) {
+        // draw rectangle around text
+        svgContent += `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="none" stroke="red"/>`;
+      }
 
       svgContent += `<g transform="translate(${x + width / 2},${y + height / 2}) rotate(${rotation})">` +
       `<text x="${0}" y="${TEXT_Y_OFFSET}" text-anchor="middle" fill="${ENGRAVING_COLOR}" stroke="none" font-size="${FONT_SIZE}" font-family="Sans,Arial">${escapeSpecialChars(text)}</text>`
