@@ -96,5 +96,6 @@ export function Grid(props) {
             onPointerDown={(e) => onDown(...getCoord(e))}
             onPointerMove={(e) => onMove(...getCoord(e))}
             onPointerUp={onUp}
+            ref={props.gridRef}
         /></div>;
 }

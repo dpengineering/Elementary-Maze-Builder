@@ -58,6 +58,7 @@ export default function App() {
 
   const intervalRef = useRef(0);
   const inputRef = useRef(null);
+  const gridRef = useRef(null);
 
   useEffect(() => {
     return () => {
@@ -72,7 +73,15 @@ export default function App() {
     setTimeout(()=>{
       inputRef.current.focus();
     }, 0)
-  }, [selectedEngraving])
+  }, [selectedEngraving]);
+
+  if (selectedEngraving != null && inputRef.current != null) {
+    inputRef.current.focus();
+    // steal focus after click has been handled
+    setTimeout(()=>{
+      inputRef.current.focus();
+    }, 0)
+  }
 
   // Function to handle text input changes
   const handleTextChange = (event) => {
@@ -146,8 +155,15 @@ export default function App() {
   }
 
 
-  return <div>
-    <div style={{ display: "flex", justifyContent: "space-between", margin: `20px auto` }}>
+  return <div
+    style={{minHeight: "100vh"}}
+    onPointerDown={(e) => {
+      if (e.target == gridRef.current || e.target == inputRef.current) return;
+      if (selectedEngraving != null) {
+        setSelectedEngraving(null);
+      }
+    }}>
+    <div style={{ display: "flex", justifyContent: "space-between"}}>
       <button id="exportButton" onClick={onExport}>Export</button>
       <ModeSelector mode={mode} onChange={(event) => {
         setMode(parseInt(event.target.value));
@@ -167,17 +183,16 @@ export default function App() {
       display: "flex",
       flexDirection: "row",
       alignItems: "center",
-      margin: `20px auto`,
       position: "relative",
       justifyContent: "space-between",
     }}>
-      
       <Grid
         grid={grid}
         setGrid={setGrid}
         engravings={engravings}
         renderProps={renderProps}
         setSelectedEngraving={setSelectedEngraving}
+        gridRef={gridRef}
       />
       {baseplateColorPickerDiv}
     </div>
