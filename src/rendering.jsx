@@ -15,6 +15,7 @@ import {
   CELLS_PER_COL,
   TEXT_Y_OFFSET,
   BRICK_COLOR,
+  INTERIOR_FILLET_FOR_DIAGONAL,
 } from './Dimensions';
 // How wide we draw the cut lines.
 // Probably irrelevant to the laser cutter but might matter
@@ -83,6 +84,21 @@ export function exportToSVG(grid, engravings, renderProps) {
         A ${BORDER_RADIUS} ${BORDER_RADIUS} 0 0 1 ${BORDER_RADIUS} 0 
         Z
       "/>`;
+
+      const hasDiagonalConnection = Array(grid.length).fill().map((_, __) =>
+        Array(grid[0].length).fill(false)
+      );
+
+      // look for diagonals
+      for (let row = 1; row < grid.length - 2; row++) {
+        for (let col = 1; col < grid[0].length - 2; col++) {
+          if (grid[row][col] && grid[row + 1][col + 1] && !grid[row + 1][col] && !grid[row][col + 1] ||
+              !grid[row][col] && !grid[row + 1][col + 1] && grid[row + 1][col] && grid[row][col + 1]
+          ) {
+            hasDiagonalConnection[row][col] = true;
+        }
+      }
+    }
   
     const visitedRight = Array(grid.length).fill().map((_, __) =>
       Array(grid[0].length).fill(false)
@@ -102,6 +118,20 @@ export function exportToSVG(grid, engravings, renderProps) {
           return wallsHorizontal[row][col - 1];
         case LEFT:
           return wallsVertical[row - 1][col - 1];
+      }
+    }
+
+    // returns true if the corner between dir -1  and dir should use the big radius
+    const isDiagonalBridge = (row, col, dir) => {
+      switch (dir) {
+        case TOP:
+          return hasDiagonalConnection[row - 1][col - 1];
+        case RIGHT:
+          return hasDiagonalConnection[row - 1][col];
+        case BOTTOM:
+          return hasDiagonalConnection[row][col];
+        case LEFT:
+          return hasDiagonalConnection[row][col - 1];
       }
     }
   
@@ -174,7 +204,7 @@ export function exportToSVG(grid, engravings, renderProps) {
         // figure out if edge continues straight, or has an interior corner, or an exterior corner
         if (hasEdge(row, col, dir)) {
           // interior angle case
-          const r = INTERIOR_FILLET_RADIUS;
+          const r = isDiagonalBridge(row, col, dir) ? INTERIOR_FILLET_FOR_DIAGONAL : INTERIOR_FILLET_RADIUS;
           svgContent += `L ${x - dCol(dir) * r} ${y - dRow(dir) * r}`;
           dir = (dir + 1) % 4;
           totalRotation++;
@@ -241,25 +271,6 @@ export function exportToSVG(grid, engravings, renderProps) {
         if (renderProps.mode !== MODE_OUTLINE)
           svgContent += `<circle cx="${x}" cy="${y}" r="${BALL_HOLE_RADIUS}" fill="none" stroke="${color}"/>`;
       }
-  
-      // look for bad diagonals
-      if (renderProps.validateDesign || renderProps.showIssues) {
-        for (let row = 1; row < grid.length - 2; row++) {
-          for (let col = 1; col < grid[0].length - 2; col++) {
-            if (grid[row][col] && grid[row + 1][col + 1] && !grid[row + 1][col] && !grid[row][col + 1] ||
-                !grid[row][col] && !grid[row + 1][col + 1] && grid[row + 1][col] && grid[row][col + 1]
-            ) {
-              designHasErrors = true;
-              if (renderProps.showIssues) {
-                const warningSize = CELL_SIZE / 2;
-                const x = col * CELL_SIZE + CELL_SIZE - warningSize / 2;
-                const y = row * CELL_SIZE + CELL_SIZE - warningSize / 2;
-                svgContent += `<rect x="${x}" y="${y}" width="${warningSize}" height="${warningSize}" fill="none" stroke="blue"/>`;
-              }
-          }
-        }
-      }
-    }
     
     for (let i = 0; i < engravings.length; i++) {
       const {text, row, col, rotation} = engravings[i];
