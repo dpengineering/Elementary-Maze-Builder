@@ -322,9 +322,10 @@ export function exportToSVG(grid, engravings, renderProps) {
         const mainColor = colors[0];
         const shadowColor = colors[1];
         const highlightColor = colors[2];
+        const isHole = !grid[row][col] && HOLE_COORDS.find(([r, c]) => r === row && c === col);
 
         return `<rect x="${x}" y="${y}" width="${CELL_SIZE}" height="${CELL_SIZE}" fill="${mainColor}" stroke="${shadowColor}"/>` +
-            drawStud(x + CELL_SIZE / 2, y + CELL_SIZE / 2, highlightColor, shadowColor);
+            drawStud(x + CELL_SIZE / 2, y + CELL_SIZE / 2, isHole ? 'white' : highlightColor, isHole ? mainColor : shadowColor);
     }
 
     if (renderProps.zoom == null) {
@@ -342,9 +343,7 @@ export function exportToSVG(grid, engravings, renderProps) {
 
         for (let row = 0; row < grid.length; row++) {
             for (let col = 0; col < grid[0].length; col++) {
-              if (grid[row][col] || !HOLE_COORDS.find(([r, c]) => r === row && c === col)) {
-                svgContent += drawBrick(row, col);
-              }
+              svgContent += drawBrick(row, col);
             }
         }
 
