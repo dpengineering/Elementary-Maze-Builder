@@ -62,7 +62,7 @@ button {
 }
 
 .mode {
-  background-color: rgba(0, 0, 16, 0.8);
+  background-color: rgb(51,51,64);
   padding: 0.4rem 0.4rem 0.1rem 0.4rem;
   border-radius: 2.2rem;
 }

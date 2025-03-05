@@ -12,6 +12,7 @@ import {
   FONT_SIZE,
   ENGRAVING_DISPLAY_COLOR,
   ENGRAVING_EXPORT_COLOR,
+  FILL_COLOR,
   CELLS_PER_COL,
   TEXT_Y_OFFSET,
   BRICK_COLOR,
@@ -55,7 +56,7 @@ export function exportToSVG(grid, engravings, renderProps) {
       })
     );
   
-    const styleContent = renderProps.mode === MODE_OUTLINE ? `fill="none" stroke="black"` : `fill="black" stroke="none"`;
+    const styleContent = renderProps.mode === MODE_OUTLINE ? `fill="none" stroke="black"` : `fill="${FILL_COLOR}" stroke="none"`;
   
     if (renderProps.zoom == null) {
       renderProps.zoom = 1;
@@ -171,7 +172,7 @@ export function exportToSVG(grid, engravings, renderProps) {
         if (dir === RIGHT || dir === LEFT) {
           if (dir === RIGHT && visitedRight[row][col] || dir === LEFT && visitedLeft[row][col]) {
             // we have already visited this cell, so we are done
-            let fill = totalRotation < 0 ? 'black' : 'white';
+            let fill = totalRotation < 0 ? FILL_COLOR : 'white';
             if (totalRotation < 0 && isIsland) {
               designHasErrors = true;
               if (renderProps.showIssues)
@@ -324,8 +325,24 @@ export function exportToSVG(grid, engravings, renderProps) {
         const highlightColor = colors[2];
         const isHole = !grid[row][col] && HOLE_COORDS.find(([r, c]) => r === row && c === col);
 
+        let wallShadow = ''; // 3D shadow effect simulating a top down light source
+        let extraEdges = ''; // the bricks are supposed to be on top of the baseplate, so we redraw the edges that we would cover
+        const SHADOW_SIZE = 0.03;
+        if (!grid[row][col]) {
+          if (grid[row - 1][col]) {
+            wallShadow = `<rect x="${x}" y="${y}" width="${CELL_SIZE}" height="${SHADOW_SIZE}" fill="${shadowColor}" stroke="none"/>`;
+            extraEdges += `<line x1="${x}" y1="${y}" x2="${x + CELL_SIZE}" y2="${y}" stroke="${BRICK_COLOR[1]}"/>`;
+          }
+          if (grid[row][col - 1]) {
+            extraEdges += `<line x1="${x}" y1="${y}" x2="${x}" y2="${y + CELL_SIZE}" stroke="${BRICK_COLOR[1]}"/>`;
+          }
+        }
+        
+
         return `<rect x="${x}" y="${y}" width="${CELL_SIZE}" height="${CELL_SIZE}" fill="${mainColor}" stroke="${shadowColor}"/>` +
-            drawStud(x + CELL_SIZE / 2, y + CELL_SIZE / 2, isHole ? 'white' : highlightColor, isHole ? mainColor : shadowColor);
+          drawStud(x + CELL_SIZE / 2, y + CELL_SIZE / 2, isHole ? 'white' : highlightColor, isHole ? mainColor : shadowColor)
+          + wallShadow
+          + extraEdges;
     }
 
     if (renderProps.zoom == null) {
@@ -341,13 +358,13 @@ export function exportToSVG(grid, engravings, renderProps) {
           viewBox="0 0 ${zoomedWidth} ${zoomedWidth}"
         ><g transform="scale(${renderProps.zoom})" stroke-width="${STROKE_WIDTH/5}">`;
 
-        for (let row = 0; row < grid.length; row++) {
-            for (let col = 0; col < grid[0].length; col++) {
-              svgContent += drawBrick(row, col);
-            }
-        }
+      for (let row = 0; row < grid.length; row++) {
+          for (let col = 0; col < grid[0].length; col++) {
+            svgContent += drawBrick(row, col);
+          }
+      }
 
-        svgContent += `</g></svg>`;
-        return svgContent;
+      svgContent += `</g></svg>`;
+      return svgContent;
 
   }

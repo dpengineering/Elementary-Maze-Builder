@@ -28,6 +28,9 @@ export const HOLE_COORDS = [
 export const ENGRAVING_DISPLAY_COLOR = '#AAAAAA'; // grey
 export const ENGRAVING_EXPORT_COLOR = 'red';
 
+// color of the acryllic
+export const FILL_COLOR = '#222222'
+
 // Lego colors
 export const BASEPLATE_COLORS = [
     // color, shadow, highlight
