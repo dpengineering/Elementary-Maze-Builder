@@ -1,5 +1,21 @@
 import { MODE_OUTLINE, MODE_BRICKS } from './App';
-import {TOTAL_WIDTH, CELL_SIZE, BORDER_RADIUS, SCREW_HOLE_RADIUS, BALL_HOLE_RADIUS, INTERIOR_FILLET_RADIUS, EXTERIOR_FILLET_RADIUS, SCREW_HOLE_OFFSET, FONT_SIZE, ENGRAVING_DISPLAY_COLOR, ENGRAVING_EXPORT_COLOR, CELLS_PER_COL, TEXT_Y_OFFSET, BRICK_COLOR} from './Dimensions';
+import {
+  TOTAL_WIDTH,
+  CELL_SIZE,
+  BORDER_RADIUS,
+  SCREW_HOLE_RADIUS,
+  BALL_HOLE_RADIUS,
+  HOLE_COORDS,
+  INTERIOR_FILLET_RADIUS,
+  EXTERIOR_FILLET_RADIUS,
+  SCREW_HOLE_OFFSET,
+  FONT_SIZE,
+  ENGRAVING_DISPLAY_COLOR,
+  ENGRAVING_EXPORT_COLOR,
+  CELLS_PER_COL,
+  TEXT_Y_OFFSET,
+  BRICK_COLOR,
+} from './Dimensions';
 // How wide we draw the cut lines.
 // Probably irrelevant to the laser cutter but might matter
 // if cutting mode set to fill
@@ -212,8 +228,7 @@ export function exportToSVG(grid, engravings, renderProps) {
     `;
   
       // Add holes at the start and end
-      const holes = [[1,1], [grid.length - 2, grid[0].length - 2]];
-      for (let hole of holes) {
+      for (let hole of HOLE_COORDS) {
         const [row, col] = hole;
         const isCovered = grid[row][col];
         designHasErrors ||= isCovered;
@@ -316,7 +331,9 @@ export function exportToSVG(grid, engravings, renderProps) {
 
         for (let row = 0; row < grid.length; row++) {
             for (let col = 0; col < grid[0].length; col++) {
+              if (grid[row][col] || !HOLE_COORDS.find(([r, c]) => r === row && c === col)) {
                 svgContent += drawBrick(row, col);
+              }
             }
         }
 

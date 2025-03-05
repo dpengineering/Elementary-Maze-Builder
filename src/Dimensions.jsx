@@ -15,6 +15,10 @@ export const TEXT_Y_OFFSET = 0.05; // fudge factor to center the text
 
 // this is just for rendering the holes that will be in the baseplate
 export const BALL_HOLE_RADIUS = CELL_SIZE * 0.4;
+export const HOLE_COORDS = [
+    [1,1],
+    [CELLS_PER_COL - 2, CELLS_PER_COL - 2],
+]
 
 
 // color of anything being engraved
