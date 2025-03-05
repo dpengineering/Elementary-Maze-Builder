@@ -13,13 +13,7 @@ export const MODE_OUTLINE = 0, MODE_FILLED = 1, MODE_BRICKS = 2;
 
 export default function App() {
   // Create the grid state: Border squares (1,2,3) and empty interior squares (0)
-  const [grid, setGrid] = useState(
-    Array(D.CELLS_PER_COL).fill().map((_, rowIndex) =>
-      Array(D.CELLS_PER_COL).fill().map((_, colIndex) =>
-        rowIndex === 0 || rowIndex === D.CELLS_PER_COL - 1 || colIndex === 0 || colIndex === D.CELLS_PER_COL - 1 ? 1 : 0
-      )
-    )
-  );
+  const [grid, setGrid] = useState(decodeMaze(window.location.hash));
 
   const [engravings, setEngravings] = useState(
     [
@@ -65,6 +59,10 @@ export default function App() {
       clearInterval(intervalRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    window.location.hash = encodeMaze(grid);
+  }, [grid]);
 
   useEffect(() => {
     if (selectedEngraving == null || inputRef.current == null) return;
@@ -226,4 +224,63 @@ function downloadSVG(svgContent, nameText) {
   link.href = URL.createObjectURL(blob);
   link.download = "maze_"+ nameText +".svg";
   link.click();
+}
+
+function emptyMaze() {
+  return Array(D.CELLS_PER_COL).fill().map((_, rowIndex) =>
+    Array(D.CELLS_PER_COL).fill().map((_, colIndex) =>
+      rowIndex === 0 || rowIndex === D.CELLS_PER_COL - 1 || colIndex === 0 || colIndex === D.CELLS_PER_COL - 1 ? 1 : 0
+    )
+  )
+}
+
+function decodeMaze(hash) {
+  hash = hash.slice(1); // remove the leading '#'
+  if (!hash) {
+    return emptyMaze();
+  }
+  let binaryString = '';
+  
+  for (let i = 0; i < hash.length; i++) {
+    if (!'0123456789abcdef'.includes(hash[i])) {
+      return emptyMaze();
+    }
+    binaryString += parseInt(hash[i], 16).toString(2).padStart(4, '0');
+  }
+  const LENGTH = D.CELLS_PER_COL - 2;
+
+  if (binaryString.length !== LENGTH * LENGTH) {
+    return emptyMaze();
+  }
+
+  const maze = emptyMaze();
+  for (let i = 0; i < binaryString.length; i++) {
+    maze[Math.floor(i / LENGTH) + 1][i % LENGTH + 1] = parseInt(binaryString[i]);
+  }
+  return maze;
+}
+
+function encodeMaze(grid) {
+  let number = '';
+  let hasWalls = false;
+  for (let row = 1; row < D.CELLS_PER_COL - 1; row++) {
+    for (let col = 1; col < D.CELLS_PER_COL - 1; col++) {
+      number += grid[row][col];
+      if (grid[row][col]) {
+        hasWalls = true;
+      }
+    }
+  }
+  if (!hasWalls) {
+    return '';
+  }
+  if (number.length % 4 !== 0) {
+    number = number.padEnd(number.length + (4 - number.length % 4), '0');
+  }
+  let hexResult = '';
+  for (let i = 0; i < number.length; i += 4) {
+    const hex = parseInt(number.slice(i, i + 4), 2).toString(16);
+    hexResult += hex;
+  }
+  return hexResult;
 }
